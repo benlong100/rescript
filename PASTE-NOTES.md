@@ -178,6 +178,42 @@ export path, run this.
   that only looks adjacent. Moving one sentence at a time avoids this.
 - New UI strings are English in all 9 locale catalogs (marked `TODO: translate`).
 
+## Follow-up: keep the speech model warm between imports
+
+Deferred deliberately (not before the workshop). Every import reloads the
+model, which costs roughly 26 seconds on an M1 — in the e2e harness a
+five-second clip took ~28s end to end, and ~26s of that was before
+"Transcribing…" appeared.
+
+**Why it reloads.** `transcribe()` in hooks/useTranscriber.ts terminates any
+existing worker and constructs a fresh one every time, so the ONNX runtime is
+re-imported, sessions recreated and weights re-uploaded. `releaseAsr()` is
+incidental: its comment notes the weights were never reused anyway because the
+worker is discarded.
+
+**Why the teardown exists.** It is a real fix, not tidiness
+(hooks/useTranscriber.ts:70): a resident ASR model competed with ffmpeg.wasm
+for renderer memory, and "a second 1 GiB core load after ASR is what made
+'ffmpeg not starting' show up on export".
+
+**Why it is nonetheless safe here.** That conflict is specific to ffmpeg.wasm.
+With the bundled native binary, *both* extraction and export run in the main
+process (lib/mediaEngine.ts:77 and :97), so the renderer never loads a wasm
+core for a resident model to collide with.
+
+**The change.** Gate warm reuse on `activeMediaEngine() === "native"`, keeping
+today's behaviour on the wasm path. Reuse the worker when model and language
+match; terminate and start fresh when either changes, on any error, and on
+WebGPU loss. Add a flag to `WorkerRequest` so the worker skips `releaseAsr()`
+when it will be reused — otherwise it disposes the sessions and the next run
+reloads inside the same worker regardless.
+
+**How to prove it.** Extend `npm run test:e2e-offline` to import a second file
+and assert the model-load phase does not recur and the second transcription is
+substantially faster. Watch renderer memory across several imports, and check
+that an export still succeeds afterwards — that is the failure upstream hit,
+and it shows up in export rather than in transcription.
+
 ## Rebasing onto upstream
 
 The risky files are `lib/store.ts` (state/history wiring, several reset sites)
