@@ -161,6 +161,24 @@ measured: 1320, 440, 879 Hz -> 1320, 440, 880
 No transcription and no listening required. When touching anything in the
 export path, run this.
 
+## An edit now invalidates a rendered export
+
+`exportResult` outlives the export dialog: closing it only flips `exportOpen`,
+and nothing else cleared the result short of loading another file. So the
+sequence export -> close -> edit -> reopen presented the **previous** render
+with its Save button live and highlighted, while "Re-export with latest edits"
+— the de-emphasised button — was the only way to get a file matching the
+project. One obvious click saved a stale render with no warning.
+
+That is a second, independent route to "my export doesn't contain the move",
+unrelated to the `parseExportRequest` ordering bug.
+
+`exportInvalidation()` is now spread into the same `set` as every committed
+edit (`pushEdit`, plus `undo` and `redo`, which bypass it), so the dialog can
+never observe a state where the result and the edit disagree, and the stale
+file's resources are released rather than leaked. Reopening after an edit shows
+a plain Export button.
+
 ## Known gaps
 
 - **The timeline canvas is still a source-time view.** Word pills and the

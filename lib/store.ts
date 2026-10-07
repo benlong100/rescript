@@ -421,17 +421,35 @@ function pushEdit(
   >
 ) {
   const s = get();
-  if (s.gestureActive) {
-    // Coalesce into the snapshot already pushed by beginGesture.
-    set({ future: [], ...next });
-  } else {
-    set({
-      past: pushHistory(s.past, snapshotOf(s)),
-      future: [],
-      ...next,
-    });
+  const nextState: Partial<EditorState> = { future: [], ...next };
+  // A gesture coalesces into the snapshot beginGesture already pushed.
+  if (!s.gestureActive) {
+    nextState.past = pushHistory(s.past, snapshotOf(s));
   }
+  set({ ...nextState, ...exportInvalidation(s) });
   bumpAutosave();
+}
+
+/**
+ * Drop any rendered export, because the edit it was rendered from no longer
+ * exists.
+ *
+ * `exportResult` outlives the export dialog — closing it only flips
+ * `exportOpen` — and nothing else cleared it short of loading another file. So
+ * editing and reopening the dialog presented the *previous* render with its
+ * Save button live and highlighted, while "Re-export with latest edits" (the
+ * de-emphasised button) was the only way to get a file matching the project.
+ * One wrong click there saved a stale render with no warning.
+ *
+ * Spread into the same `set` as the edit, so the dialog never observes a state
+ * where the result and the edit disagree.
+ */
+function exportInvalidation(
+  current: EditorState
+): Partial<Pick<EditorState, "exportResult">> {
+  if (!current.exportResult) return {};
+  disposeExportResult(current.exportResult);
+  return { exportResult: null };
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -1188,6 +1206,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       manualCuts: prev.manualCuts,
       sceneBoundaries: prev.sceneBoundaries,
       moves: prev.moves,
+      ...exportInvalidation(get()),
       past: past.slice(0, -1),
       future: [
         { words, speakers, manualCuts, sceneBoundaries, moves },
@@ -1218,6 +1237,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       manualCuts: next.manualCuts,
       sceneBoundaries: next.sceneBoundaries,
       moves: next.moves,
+      ...exportInvalidation(get()),
       future: future.slice(1),
       past: pushHistory(past, {
         words,
