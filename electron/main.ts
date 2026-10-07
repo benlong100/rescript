@@ -54,6 +54,7 @@ const MIME: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".wasm": "application/wasm",
+  ".onnx": "application/octet-stream",
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
@@ -195,6 +196,15 @@ const readyRenderers = new WeakSet<WebContents>();
 const pendingCommands = new WeakMap<WebContents, MenuCommand[]>();
 
 function deliverMenuCommand(contents: WebContents, command: MenuCommand): void {
+  if (command.type === "open-project-file") {
+    // Same user-activation constraint as the media picker below.
+    void contents
+      .executeJavaScript("window.rescriptOpenProjectPicker?.()", true)
+      .catch((err: unknown) =>
+        console.error("Failed to open the project picker.", err)
+      );
+    return;
+  }
   if (command.type === "open-file") {
     // Chromium only opens a file chooser under user activation, which an IPC
     // message doesn't carry — the click() is silently dropped. executeJavaScript

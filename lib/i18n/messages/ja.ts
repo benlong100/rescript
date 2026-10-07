@@ -57,6 +57,12 @@ export const ja: Record<MessageKey, string> = {
   "editor.undo": "取り消し (⌘Z)",
   "editor.redo": "やり直し (⇧⌘Z)",
   "editor.export": "書き出し",
+  // TODO: translate
+  "editor.saveProject": "Save project",
+  // TODO: translate
+  "editor.openProjectFile": "Open project file",
+  // TODO: translate
+  "upload.openProject": "Open a saved project",
   "topbar.startOver": "最初からやり直す",
   "transcript.replace": "SRT、VTT、JSON から文字起こしを置き換え",
   "transcript.header": "文字起こし",
@@ -66,6 +72,12 @@ export const ja: Record<MessageKey, string> = {
   "transcript.invalidFile": "SRT、VTT、JSON の文字起こしファイルを選択してください。",
   "transcript.noSpeech": "音声が検出されませんでした。ファイルに音声があるか確認するか、文字起こしをインポートしてください。",
   "transcript.cut": "カット",
+  // TODO: translate
+  "transcript.moveLift": "Move",
+  // TODO: translate
+  "transcript.movePlace": "Place here",
+  // TODO: translate
+  "transcript.movePending": "Moving {count} words — click where it should go, then press ⌘⇧V or Place here",
   "transcript.follow": "再生位置に追従",
   "transcript.hideDeleted": "削除済みの単語を隠す",
   "transcript.showDeleted": "削除済みの単語を表示",

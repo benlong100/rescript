@@ -1,3 +1,5 @@
+import { OFFLINE_BUILD } from "./offline";
+
 /** Local speech models offered on the upload screen. */
 export type WhisperModel =
   | "base"
@@ -283,16 +285,35 @@ export function isModelId(value: unknown): value is ModelId {
 
 const MODEL_STORAGE_KEY = "rescript.model";
 
+/**
+ * Models bundled by scripts/fetch-models.mjs. Keep the two lists in step: an
+ * offline build can only load what it ships.
+ */
+const BUNDLED_MODELS: ModelId[] = ["base", "small"];
+
+/**
+ * What the source dropdown may offer. An offline build has remote loading
+ * disabled, so an unbundled model is a dead end — a transcription that errors
+ * out several seconds in. Don't show the option at all.
+ */
+export const SELECTABLE_MODELS: ModelId[] = OFFLINE_BUILD
+  ? MODEL_ORDER.filter((id) => BUNDLED_MODELS.includes(id))
+  : MODEL_ORDER;
+
+const DEFAULT_MODEL: ModelId = SELECTABLE_MODELS[0] ?? "base";
+
 /** Read the last-selected speech model from localStorage (defaults to base). */
 export function loadModelPreference(): ModelId {
-  if (typeof window === "undefined") return "base";
+  if (typeof window === "undefined") return DEFAULT_MODEL;
   try {
     const raw = window.localStorage.getItem(MODEL_STORAGE_KEY);
-    if (isModelId(raw)) return raw;
+    // Clamped to the selectable set: a preference saved by a different build
+    // must not resurrect a model this one cannot load.
+    if (isModelId(raw) && SELECTABLE_MODELS.includes(raw)) return raw;
   } catch {
     // private mode / disabled storage
   }
-  return "base";
+  return DEFAULT_MODEL;
 }
 
 /** Persist the selected speech model for the next visit. */

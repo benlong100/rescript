@@ -23,7 +23,7 @@ import TranscriptPanel from "./TranscriptPanel";
 import MediaPreview from "./MediaPreview";
 import Timeline from "./Timeline";
 import ExportDialog from "./ExportDialog";
-import { Download, Redo2, Undo2 } from "lucide-react";
+import { Download, FolderOpen, Redo2, Save, Undo2 } from "lucide-react";
 import LogoLoader from "./LogoLoader";
 import SettingsMenu from "./SettingsMenu";
 import ModelSelector, {
@@ -152,7 +152,37 @@ export default function Editor() {
   const menuInputRef = useRef<HTMLInputElement>(null);
   const engineReady = useMediaEngineSupport() === "ready";
   const openFilePicker = useCallback(() => menuInputRef.current?.click(), []);
-  useDesktopMenu(openFilePicker, engineReady);
+
+  // Portable project files: saving is a download, opening needs a picker that
+  // the native menu can reach the same way it reaches the media one.
+  const projectInputRef = useRef<HTMLInputElement>(null);
+  const openProjectPicker = useCallback(
+    () => projectInputRef.current?.click(),
+    []
+  );
+  useDesktopMenu(openFilePicker, engineReady, openProjectPicker);
+
+  const saveProjectFile = useEditorStore((s) => s.saveProjectFile);
+  const openProjectFile = useEditorStore((s) => s.openProjectFile);
+
+  const handleSaveProject = useCallback(() => {
+    void saveProjectFile().catch((err: unknown) => {
+      console.error(err);
+      alert(err instanceof Error ? err.message : t("error.export"));
+    });
+  }, [saveProjectFile, t]);
+
+  const handleOpenProjectFile = useCallback(
+    (file: File | undefined) => {
+      if (!file) return;
+      void openProjectFile(file).catch((err: unknown) => {
+        console.error(err);
+        // readProjectFile throws messages written for exactly this alert.
+        alert(err instanceof Error ? err.message : t("error.openProject"));
+      });
+    },
+    [openProjectFile, t]
+  );
 
   const startMenuFile = useCallback(
     (file: File) => {
@@ -398,6 +428,22 @@ export default function Editor() {
             </button>
             <div className="mx-1 h-5 w-px bg-zinc-200 dark:bg-zinc-700" />
             <button
+              onClick={handleSaveProject}
+              disabled={status !== "ready"}
+              title={t("editor.saveProject")}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800 cursor-pointer disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+            >
+              <Save size={16} />
+            </button>
+            <button
+              onClick={openProjectPicker}
+              title={t("editor.openProjectFile")}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800 cursor-pointer dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+            >
+              <FolderOpen size={16} />
+            </button>
+            <div className="mx-1 h-5 w-px bg-zinc-200 dark:bg-zinc-700" />
+            <button
               onClick={() => setExportOpen(true)}
               disabled={status !== "ready" && status !== "exporting"}
               className="flex ml-1 h-8 items-center gap-1.5 rounded-full bg-zinc-900 px-4 text-[13px] font-medium text-white transition hover:bg-zinc-700 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
@@ -436,6 +482,16 @@ export default function Editor() {
           }}
         />
       )}
+      <input
+        ref={projectInputRef}
+        type="file"
+        accept=".rescript,application/zip"
+        className="sr-only"
+        onChange={(e) => {
+          handleOpenProjectFile(e.target.files?.[0]);
+          e.target.value = "";
+        }}
+      />
       <ExportDialog />
     </div>
   );

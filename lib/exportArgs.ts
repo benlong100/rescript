@@ -273,13 +273,23 @@ export function parseExportRequest(value: unknown): ExportRequest | null {
   if (!Array.isArray(keepRanges)) return null;
   if (keepRanges.length === 0 || keepRanges.length > MAX_EXPORT_RANGES) return null;
   const ranges: TimeRange[] = [];
-  let previousEnd = 0;
   for (const range of keepRanges) {
     if (!range || typeof range !== "object") return null;
     const { start, end } = range as Record<string, unknown>;
     if (!isFiniteNonNegative(start) || !isFiniteNonNegative(end)) return null;
-    if (end <= start || start < previousEnd) return null;
-    previousEnd = end;
+    if (end <= start) return null;
+    /**
+     * Deliberately *not* requiring `start >= previousEnd`.
+     *
+     * Keep ranges used to be the complement of sorted cut ranges, so they
+     * always arrived in ascending source order and that made a cheap sanity
+     * check. Reordering (see lib/segments.ts) breaks the invariant on purpose:
+     * the array is a playback sequence, and moved material appears out of
+     * source order. Enforcing the old rule here rejected every reordered
+     * export, so the desktop render silently refused the edit the preview had
+     * just played. Each range still has to be finite, non-negative and
+     * non-empty, which is what keeps the filtergraph well-formed.
+     */
     ranges.push({ start, end });
   }
   if (!options || typeof options !== "object") return null;

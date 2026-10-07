@@ -57,6 +57,12 @@ export const zhTW: Record<MessageKey, string> = {
   "editor.undo": "復原 (⌘Z)",
   "editor.redo": "重做 (⇧⌘Z)",
   "editor.export": "匯出",
+  // TODO: translate
+  "editor.saveProject": "Save project",
+  // TODO: translate
+  "editor.openProjectFile": "Open project file",
+  // TODO: translate
+  "upload.openProject": "Open a saved project",
   "topbar.startOver": "重新開始",
   "transcript.replace": "用 SRT、VTT 或 JSON 取代逐字稿",
   "transcript.header": "逐字稿",
@@ -66,6 +72,12 @@ export const zhTW: Record<MessageKey, string> = {
   "transcript.invalidFile": "請選擇 SRT、VTT 或 JSON 逐字稿檔。",
   "transcript.noSpeech": "未偵測到語音。請確認檔案有音訊，或匯入逐字稿。",
   "transcript.cut": "剪除",
+  // TODO: translate
+  "transcript.moveLift": "Move",
+  // TODO: translate
+  "transcript.movePlace": "Place here",
+  // TODO: translate
+  "transcript.movePending": "Moving {count} words — click where it should go, then press ⌘⇧V or Place here",
   "transcript.follow": "跟隨播放頭",
   "transcript.hideDeleted": "隱藏已刪除文字",
   "transcript.showDeleted": "顯示已刪除文字",

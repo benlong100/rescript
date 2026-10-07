@@ -15,7 +15,15 @@ export type MenuCommand =
   | { type: "open-project"; id: string }
   | { type: "clear-recents" }
   /** Leave the editor for the upload screen (a close request, intercepted). */
-  | { type: "close-project" };
+  | { type: "close-project" }
+  /** Lift the transcript selection, pending a destination. */
+  | { type: "move-lift" }
+  /** Place lifted material before the transcript selection. */
+  | { type: "move-place" }
+  /** Write the session to a portable .rescript file. */
+  | { type: "save-project-file" }
+  /** Pick a .rescript file to open. */
+  | { type: "open-project-file" };
 
 /** The renderer owns the project list (it lives in IndexedDB); this is the last
  *  snapshot it pushed, kept so the menu can be rebuilt without asking again. */
@@ -38,10 +46,23 @@ function fileMenu(): MenuItemConstructorOptions {
     label: t("file"),
     submenu: [
       {
-        label: t("openProject"),
+        // ⌘O starts a new project from a recording; it does not open a saved
+        // project, which is what the old "Open Project…" label implied.
+        label: t("importMedia"),
         accelerator: "CmdOrCtrl+O",
         click: () => send({ type: "open-file" }),
       },
+      {
+        label: t("openProjectFile"),
+        accelerator: "Alt+CmdOrCtrl+O",
+        click: () => send({ type: "open-project-file" }),
+      },
+      {
+        label: t("saveProjectAs"),
+        accelerator: "CmdOrCtrl+S",
+        click: () => send({ type: "save-project-file" }),
+      },
+      { type: "separator" },
       {
         label: t("reopenLast"),
         accelerator: "Shift+CmdOrCtrl+O",
@@ -107,6 +128,17 @@ function template(): MenuItemConstructorOptions[] {
         { role: "cut", label: t("cut") },
         { role: "copy", label: t("copy") },
         { role: "paste", label: t("paste") },
+        { type: "separator" },
+        {
+          label: t("moveLift"),
+          accelerator: "CmdOrCtrl+Shift+X",
+          click: () => send({ type: "move-lift" }),
+        },
+        {
+          label: t("movePlace"),
+          accelerator: "CmdOrCtrl+Shift+V",
+          click: () => send({ type: "move-place" }),
+        },
         ...(isMac
           ? ([
               { role: "pasteAndMatchStyle", label: t("pasteMatch") },

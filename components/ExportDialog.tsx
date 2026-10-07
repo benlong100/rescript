@@ -13,7 +13,7 @@ import {
 import { useEditorStore, type ExportResult } from "@/lib/store";
 import { reportError } from "@/lib/sentry";
 import { trackEvent } from "@/lib/telemetry";
-import { formatTime, getCutRanges, getEditedDuration, getKeepRanges } from "@/lib/edits";
+import { formatTime, getCutRanges, getEditedDuration } from "@/lib/edits";
 import {
   defaultExportResolution,
   type AudioExportFormat,
@@ -40,6 +40,7 @@ import {
 } from "@/lib/serializeTimeline";
 import { AAF_MAX_CLIPS } from "@/lib/aaf/patchAaf";
 import { useCutRanges } from "@/hooks/useCutRanges";
+import { useOrderedRanges } from "@/hooks/useOrderedRanges";
 import { useI18n } from "./I18nProvider";
 import { localizeRuntimeMessage } from "@/lib/i18n";
 import { en } from "@/lib/i18n/messages/en";
@@ -151,14 +152,13 @@ export default function ExportDialog() {
   const [saving, setSaving] = useState(false);
 
   const cuts = useCutRanges();
+  // Playback order, so a reordered edit renders in the order it plays.
+  const orderedRanges = useOrderedRanges();
   const editedDuration = useMemo(
     () => getEditedDuration(cuts, duration),
     [cuts, duration]
   );
-  const keepRangeCount = useMemo(
-    () => getKeepRanges(cuts, duration).length,
-    [cuts, duration]
-  );
+  const keepRangeCount = orderedRanges.length;
   const aafOverCap =
     timelineFormat === "aaf" && keepRangeCount > AAF_MAX_CLIPS;
   const timelineMeta = TIMELINE_FORMATS.find((f) => f.value === timelineFormat);
@@ -258,7 +258,7 @@ export default function ExportDialog() {
     const stillCurrent = () => useEditorStore.getState().videoFile === videoFile;
     try {
       setRenderEngine(await activeMediaEngine());
-      const keeps = getKeepRanges(cuts, duration);
+      const keeps = orderedRanges;
       const result = await exportMedia(
         videoFile,
         keeps,
@@ -311,8 +311,7 @@ export default function ExportDialog() {
     activeTab,
     isAudioProject,
     hasAudioTrack,
-    cuts,
-    duration,
+    orderedRanges,
     editedDuration,
     audioFormat,
     videoFormat,
@@ -390,7 +389,7 @@ export default function ExportDialog() {
     setTimelineBusy(true);
     setError(null);
     try {
-      const keeps = getKeepRanges(cuts, duration);
+      const keeps = orderedRanges;
       const videoEl = useEditorStore.getState().videoEl;
       const width =
         videoEl && "videoWidth" in videoEl
@@ -419,7 +418,7 @@ export default function ExportDialog() {
     }
   }, [
     videoFile,
-    cuts,
+    orderedRanges,
     duration,
     timelineFormat,
     timelineFrameRate,

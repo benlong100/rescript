@@ -11,7 +11,15 @@ export type MenuCommand =
   | { type: "open-project"; id: string }
   | { type: "clear-recents" }
   /** Leave the editor for the upload screen (an intercepted window close). */
-  | { type: "close-project" };
+  | { type: "close-project" }
+  /** Lift the transcript selection, pending a destination. */
+  | { type: "move-lift" }
+  /** Place lifted material before the transcript selection. */
+  | { type: "move-place" }
+  /** Write the session to a portable .rescript file. */
+  | { type: "save-project-file" }
+  /** Pick a .rescript file to open. */
+  | { type: "open-project-file" };
 
 /** Why a native media call didn't succeed (mirrors `MediaFailure` in electron/media.ts). */
 export type NativeMediaFailure =
@@ -111,6 +119,7 @@ declare global {
     /** Opens the media picker. Set by the renderer, called by the main process
      *  through executeJavaScript so the dialog gets a user activation. */
     rescriptOpenFilePicker?: () => void;
+    rescriptOpenProjectPicker?: () => void;
   }
 }
 

@@ -51,3 +51,4 @@ next-env.d.ts
 
 # native ffmpeg for the desktop app (scripts/fetch-ffmpeg.mjs)
 /build/ffmpeg/
+

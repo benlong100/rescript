@@ -3,6 +3,9 @@ import type { DesktopMessageKey } from "./en";
 export const ja: Record<DesktopMessageKey, string> = {
   file: "ファイル",
   openProject: "プロジェクトを開く…",
+  importMedia: "Import Media…",
+  openProjectFile: "Open Project File…",
+  saveProjectAs: "Save Project As…",
   reopenLast: "最後のプロジェクトを再度開く",
   recentProjects: "最近使ったプロジェクト",
   noRecent: "最近使ったプロジェクトはありません",
@@ -13,6 +16,8 @@ export const ja: Record<DesktopMessageKey, string> = {
   cut: "切り取り",
   copy: "コピー",
   paste: "ペースト",
+  moveLift: "Move Selection",
+  movePlace: "Place Moved Audio Here",
   pasteMatch: "ペーストしてスタイルを合わせる",
   delete: "削除",
   selectAll: "すべてを選択",

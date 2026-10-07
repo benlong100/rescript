@@ -6,6 +6,7 @@ import {
   AudioLines,
   Clapperboard,
   Film,
+  FolderOpen,
   Loader2,
   Music,
   Scissors,
@@ -22,7 +23,7 @@ import ModelSelector, {
   ModelOptionSeparator,
 } from "./ModelSelector";
 import ImportTranscriptOption from "./ImportTranscriptOption";
-import { MODEL_ORDER } from "@/lib/models";
+import { SELECTABLE_MODELS } from "@/lib/models";
 import { useMediaEngineSupport } from "@/hooks/useMediaEngineSupport";
 import { detectMediaKind, MEDIA_ACCEPT } from "@/lib/media";
 import { formatTime } from "@/lib/edits";
@@ -166,6 +167,7 @@ export default function UploadScreen({
   ) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const projectInputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
   const [dragging, setDragging] = useState(false);
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
@@ -179,7 +181,21 @@ export default function UploadScreen({
   const pendingTranscript = useEditorStore((s) => s.pendingTranscript);
   const openProject = useEditorStore((s) => s.openProject);
   const removeProject = useEditorStore((s) => s.removeProject);
+  const openProjectFile = useEditorStore((s) => s.openProjectFile);
+
   const { t } = useI18n();
+
+  const handleProjectFile = useCallback(
+    (file: File | undefined) => {
+      if (!file) return;
+      void openProjectFile(file).catch((err: unknown) => {
+        console.error(err);
+        // readProjectFile throws messages written for exactly this alert.
+        alert(err instanceof Error ? err.message : t("error.openProject"));
+      });
+    },
+    [openProjectFile, t]
+  );
 
   const refreshProjects = useCallback(async () => {
     try {
@@ -290,7 +306,7 @@ export default function UploadScreen({
                 <SettingsMenu />
                 <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-700 mr-1" />
                 <ModelSelector groupLabel={t("model.transcriptSource")}>
-                  {MODEL_ORDER.map((id) => (
+                  {SELECTABLE_MODELS.map((id) => (
                     <ModelOption key={id} id={id} />
                   ))}
                   <ModelOptionSeparator />
@@ -408,6 +424,30 @@ export default function UploadScreen({
               onChange={(e) => handleFiles(e.target.files)}
             />
           </label>
+
+          {/* Opening a saved project file, which unlike the IndexedDB recents
+              can come off a share, a USB stick, or another machine. */}
+          {ready && (
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={() => projectInputRef.current?.click()}
+                className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+              >
+                <FolderOpen size={14} />
+                {t("upload.openProject")}
+              </button>
+              <input
+                ref={projectInputRef}
+                type="file"
+                accept=".rescript,application/zip"
+                className="sr-only"
+                onChange={(e) => {
+                  handleProjectFile(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+          )}
 
           {/* On desktop the recent list lives in the native File menu instead. */}
           {ready && !isElectron && (

@@ -3,6 +3,9 @@ import type { DesktopMessageKey } from "./en";
 export const ko: Record<DesktopMessageKey, string> = {
   file: "파일",
   openProject: "프로젝트 열기…",
+  importMedia: "Import Media…",
+  openProjectFile: "Open Project File…",
+  saveProjectAs: "Save Project As…",
   reopenLast: "마지막 프로젝트 다시 열기",
   recentProjects: "최근 프로젝트",
   noRecent: "최근 프로젝트 없음",
@@ -13,6 +16,8 @@ export const ko: Record<DesktopMessageKey, string> = {
   cut: "오려두기",
   copy: "복사",
   paste: "붙여넣기",
+  moveLift: "Move Selection",
+  movePlace: "Place Moved Audio Here",
   pasteMatch: "스타일에 맞게 붙여넣기",
   delete: "삭제",
   selectAll: "모두 선택",

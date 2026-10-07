@@ -6,9 +6,11 @@ import {
   ArrowUp,
   ArrowUpFromLine,
   ChevronLast,
+  ClipboardPaste,
   Eye,
   EyeOff,
   Merge,
+  MoveRight,
   Pencil,
   RotateCcw,
   Scissors,
@@ -17,6 +19,8 @@ import {
 } from "lucide-react";
 import { FloatingPortal } from "@floating-ui/react";
 import { useEditorStore } from "@/lib/store";
+import { orderWordsForDisplay } from "@/lib/segments";
+import { useOrderedRanges } from "@/hooks/useOrderedRanges";
 import { isDisfluencyPlaceholder } from "@/lib/disfluencies";
 import TranscriptToolsMenu from "./TranscriptToolsMenu";
 import {
@@ -130,6 +134,12 @@ export default function TranscriptPanel() {
   const importWords = useEditorStore((s) => s.importWords);
   const removeSceneBoundary = useEditorStore((s) => s.removeSceneBoundary);
   const selectedWordIds = useEditorStore((s) => s.selectedWordIds);
+  const moveClipboard = useEditorStore((s) => s.moveClipboard);
+  const liftSelectionForMove = useEditorStore((s) => s.liftSelectionForMove);
+  const placeMoveBeforeSelection = useEditorStore(
+    (s) => s.placeMoveBeforeSelection
+  );
+  const ordered = useOrderedRanges();
   const playing = useEditorStore((s) => s.playing);
   const activeWordId = useEditorStore((s) => findActiveWordId(s.words, s.currentTime));
 
@@ -219,7 +229,15 @@ export default function TranscriptPanel() {
       offsetMain: 12,
     });
 
-  const turns = useMemo(() => groupWordsBySpeaker(words), [words]);
+  // Words in playback order, so moved material reads where it now plays.
+  const displayWords = useMemo(
+    () => orderWordsForDisplay(words, ordered),
+    [words, ordered]
+  );
+  const turns = useMemo(
+    () => groupWordsBySpeaker(displayWords),
+    [displayWords]
+  );
 
   const deletedCount = useMemo(() => cutOutIds.size, [cutOutIds]);
   const handleImportTranscript = useCallback(
@@ -256,6 +274,20 @@ export default function TranscriptPanel() {
     deleteWords(selection.ids);
     clearSelection();
   }, [selection, deleteWords, clearSelection]);
+
+  /**
+   * Lift the selection without changing the edit yet — the audio only moves
+   * once a destination is chosen. Two steps rather than delete-then-reinsert,
+   * which would have to bookkeep a restore as well.
+   */
+  const liftSelection = useCallback(() => {
+    if (liftSelectionForMove()) clearSelection();
+  }, [liftSelectionForMove, clearSelection]);
+
+  /** Drop the lifted material in front of the selected word. */
+  const pasteBeforeSelection = useCallback(() => {
+    if (placeMoveBeforeSelection()) clearSelection();
+  }, [placeMoveBeforeSelection, clearSelection]);
 
   const restoreSelection = useCallback(() => {
     if (!selection) return;
@@ -352,6 +384,30 @@ export default function TranscriptPanel() {
     return () => document.removeEventListener("keydown", handler);
   }, [selection, assigningSpeaker, correcting, openSpeakerAssign]);
 
+  // ⌘X / ⌘V move material. Registered here rather than in Editor because both
+  // need the transcript's selection and display order.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+      if (isTypingTarget(e.target)) return;
+      // On macOS a menu item's key equivalent is consumed by the menu before
+      // the page sees it, so plain ⌘X / ⌘V never arrive in the packaged app
+      // (role: "cut" / "paste" own them). The ⇧ variants are ours alone, and
+      // the native Edit menu dispatches them over IPC as a belt-and-braces
+      // path — see electron/menu.ts.
+      const key = e.key.toLowerCase();
+      if (key === "x" && selection) {
+        e.preventDefault();
+        liftSelection();
+      } else if (key === "v" && moveClipboard) {
+        e.preventDefault();
+        pasteBeforeSelection();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [selection, moveClipboard, liftSelection, pasteBeforeSelection]);
+
   const busy = status === "preparing" || status === "transcribing";
 
   return (
@@ -365,6 +421,13 @@ export default function TranscriptPanel() {
           {t("transcript.header")}
         </span>
         <div className="ml-auto flex items-center gap-2">
+          {moveClipboard && (
+            <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[9px] font-medium text-amber-700 line-clamp-1 dark:bg-amber-950/40 dark:text-amber-400">
+              {t("transcript.movePending", {
+                count: moveClipboard.wordIds.length,
+              })}
+            </span>
+          )}
           {deletedCount > 0 && (
             <span className="rounded-md bg-red-50 px-2 py-0.5 text-[9px] font-medium text-red-600 line-clamp-1 line-through dark:bg-red-950/40 dark:text-red-400">
               {t(
@@ -527,6 +590,25 @@ export default function TranscriptPanel() {
                     <RotateCcw size={13} />
                     {t("common.restore")}
                   </button>
+                )}
+                {moveClipboard ? (
+                  <button
+                    onClick={pasteBeforeSelection}
+                    className="flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-amber-700 transition hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/40"
+                  >
+                    <ClipboardPaste size={13} />
+                    {t("transcript.movePlace")}
+                  </button>
+                ) : (
+                  selection.anyKept && (
+                    <button
+                      onClick={liftSelection}
+                      className="flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-zinc-700 transition hover:bg-amber-50 hover:text-amber-700 dark:text-zinc-200 dark:hover:bg-amber-950/40 dark:hover:text-amber-400"
+                    >
+                      <MoveRight size={13} />
+                      {t("transcript.moveLift")}
+                    </button>
+                  )
                 )}
                 <button
                   onClick={() => openCorrect(selection.ids)}

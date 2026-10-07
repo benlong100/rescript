@@ -35,6 +35,7 @@ import {
   transformersProgress,
 } from "weightlift/transformers";
 import { en } from "@/lib/i18n/messages/en";
+import { OFFLINE_BUILD } from "@/lib/offline";
 import type { Word, WorkerRequest, WorkerResponse } from "@/lib/types";
 import {
   MODELS,
@@ -95,15 +96,54 @@ import { isWebGpuDeviceLostError } from "@/lib/webgpu";
  */
 env.fetch = installFetchRetry(self as unknown as { fetch: typeof fetch });
 
-env.allowLocalModels = false;
+/**
+ * Air-gapped build: every model is bundled under public/models/ (see
+ * scripts/fetch-models.mjs) and the Hub is never contacted. Set by
+ * `npm run dist:offline`.
+ *
+ * Remote loading is switched *off* rather than merely deprioritised, so a
+ * missing file fails immediately and legibly instead of hanging on a fetch to
+ * huggingface.co that cannot succeed on a machine with no network.
+ */
+const OFFLINE_MODELS = OFFLINE_BUILD;
+
 /**
  * Where {@link MODELS} entries flagged `local` are served from — an export that
  * has not been published to the Hub yet, sitting in public/models/<id>/.
- * Enabled only for the duration of such a load (see `servedLocally`), because
- * `allowLocalModels` is global: left on, every Hub model would probe this path
- * and 404 for each of its files before falling back.
+ * Normally enabled only for the duration of such a load (see `servedLocally`),
+ * because `allowLocalModels` is global: left on, every Hub model would probe
+ * this path and 404 for each of its files before falling back. In an offline
+ * build that probe is the only path there is, so it stays on.
+ *
+ * transformers.js resolves a local model as `localModelPath + <id> + <file>`,
+ * which is why public/models mirrors the Hub's own directory layout and no
+ * model id has to change.
  */
 const LOCAL_MODEL_PATH = "/models/";
+
+env.allowLocalModels = OFFLINE_MODELS;
+if (OFFLINE_MODELS) {
+  env.allowRemoteModels = false;
+  env.localModelPath = LOCAL_MODEL_PATH;
+  /**
+   * Critical: without this, nothing loads.
+   *
+   * After a successful *local* read, transformers.js caches what it just read
+   * (`storeCachedResource`, awaited inline, with no try/catch). The weights are
+   * served over Electron's `app://` scheme, and the Cache API only accepts
+   * http/https requests — so `cache.put` throws
+   * "Request scheme 'app' is unsupported" and takes the model load down with it.
+   *
+   * Caching is pointless here anyway: the weights already sit on local disk
+   * inside the app bundle, so the copy would only duplicate ~900 MB.
+   *
+   * This is why a machine that had previously run the official release appeared
+   * to work offline — those cache entries were stored from https:// Hub URLs, so
+   * the lookup hit and the failing `put` was never reached. On a clean profile
+   * the local read succeeds in milliseconds and then the cache write kills it.
+   */
+  env.useBrowserCache = false;
+}
 const ORT_WASM_PATHS = "/vendor/ort/";
 /** Parakeet.js pins onnxruntime-web@1.24.1 — keep its WASM on a separate path. */
 const PARAKEET_ORT_WASM_PATHS = "/vendor/ort-parakeet/";
@@ -397,6 +437,19 @@ function parakeetModel(): ModelDefinition<ParakeetInstance> {
  * enabled makes every Hub model try the local path first and 404 once per
  * file. Scoping it to the load keeps both paths clean.
  */
+/**
+ * Report a bundled model as cached.
+ *
+ * `isCached` asks Cache Storage, which an air-gapped build never populates (see
+ * `env.useBrowserCache` above), so every load would be labelled "Downloading…"
+ * when it is really a local disk read. Reporting it as cached keeps the UI
+ * truthful — and stops a stalled-looking progress bar from being the first
+ * thing a user sees on a machine with no network.
+ */
+function bundledLocally<T>(definition: ModelDefinition<T>): ModelDefinition<T> {
+  return { ...definition, isCached: async () => true };
+}
+
 function servedLocally<T>(definition: ModelDefinition<T>): ModelDefinition<T> {
   const withLocalPath = async <R,>(fn: () => Promise<R>): Promise<R> => {
     const previousAllow = env.allowLocalModels;
@@ -446,7 +499,8 @@ const models = new ModelManager({
         // them — stay alive with no way left to reach them. See releaseAsr().
         dispose: (transcriber) => transcriber.dispose(),
       });
-      return [info.id, info.local ? servedLocally(definition) : definition];
+      const resolved = info.local ? servedLocally(definition) : definition;
+      return [info.id, OFFLINE_MODELS ? bundledLocally(resolved) : resolved];
     })
   ),
 });
@@ -549,7 +603,10 @@ function buildAlignerRegistry(): Record<string, ModelDefinition<Aligner>> {
     if (!byId.has(info.id)) byId.set(info.id, info);
   }
   return Object.fromEntries(
-    [...byId.entries()].map(([id, info]) => [id, alignerModel(info)])
+    [...byId.entries()].map(([id, info]) => {
+      const definition = alignerModel(info);
+      return [id, OFFLINE_MODELS ? bundledLocally(definition) : definition];
+    })
   );
 }
 

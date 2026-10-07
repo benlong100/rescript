@@ -3,6 +3,9 @@ import type { DesktopMessageKey } from "./en";
 export const fr: Record<DesktopMessageKey, string> = {
   file: "Fichier",
   openProject: "Ouvrir un projet…",
+  importMedia: "Import Media…",
+  openProjectFile: "Open Project File…",
+  saveProjectAs: "Save Project As…",
   reopenLast: "Rouvrir le dernier projet",
   recentProjects: "Projets récents",
   noRecent: "Aucun projet récent",
@@ -13,6 +16,8 @@ export const fr: Record<DesktopMessageKey, string> = {
   cut: "Couper",
   copy: "Copier",
   paste: "Coller",
+  moveLift: "Move Selection",
+  movePlace: "Place Moved Audio Here",
   pasteMatch: "Coller et adapter le style",
   delete: "Supprimer",
   selectAll: "Tout sélectionner",

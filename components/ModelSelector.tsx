@@ -26,7 +26,7 @@ import {
   SignalBarsMedium,
 } from "./SignalBars";
 import {
-  TRANSCRIPT_LANGUAGE_ORDER,
+  SELECTABLE_TRANSCRIPT_LANGUAGES,
   TRANSCRIPT_LANGUAGES,
   type TranscriptLanguage,
 } from "@/lib/languages";
@@ -478,7 +478,7 @@ export function LanguageSection() {
             aria-label={t("model.transcriptLanguage")}
             className="z-50 w-44 overflow-hidden p-1"
           >
-            {TRANSCRIPT_LANGUAGE_ORDER.map((id) => {
+            {SELECTABLE_TRANSCRIPT_LANGUAGES.map((id) => {
               const option = TRANSCRIPT_LANGUAGES[id];
               const selected = id === language;
               return (

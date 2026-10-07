@@ -24,7 +24,11 @@ import { localizeRuntimeMessage } from "@/lib/i18n";
  *   Opening a project waits rather than getting dropped: the menu can open a
  *   window from scratch, and it lands long before isolation settles.
  */
-export function useDesktopMenu(openFilePicker: () => void, ready: boolean): void {
+export function useDesktopMenu(
+  openFilePicker: () => void,
+  ready: boolean,
+  openProjectPicker?: () => void
+): void {
   const { t } = useI18n();
   const projectId = useEditorStore((s) => s.projectId);
   const status = useEditorStore((s) => s.status);
@@ -92,6 +96,15 @@ export function useDesktopMenu(openFilePicker: () => void, ready: boolean): void
     };
   }, [openFilePicker]);
 
+  // File › Open Project File… needs the same user-activation treatment.
+  useEffect(() => {
+    if (!isElectron || !openProjectPicker) return;
+    window.rescriptOpenProjectPicker = openProjectPicker;
+    return () => {
+      delete window.rescriptOpenProjectPicker;
+    };
+  }, [openProjectPicker]);
+
   const run = useCallback(
     (command: MenuCommand) => {
       switch (command.type) {
@@ -114,6 +127,33 @@ export function useDesktopMenu(openFilePicker: () => void, ready: boolean): void
           return;
         case "close-project":
           void closeProject();
+          return;
+        // The transcript's own ⌘⇧X / ⌘⇧V listener covers the browser build;
+        // these arrive from the native Edit menu, which owns the accelerator in
+        // the packaged app.
+        case "move-lift":
+          useEditorStore.getState().liftSelectionForMove();
+          return;
+        case "move-place":
+          useEditorStore.getState().placeMoveBeforeSelection();
+          return;
+        case "save-project-file":
+          void useEditorStore
+            .getState()
+            .saveProjectFile()
+            .catch((err: unknown) => {
+              console.error(err);
+              alert(
+                err instanceof Error
+                  ? localizeRuntimeMessage(err.message, t)
+                  : t("error.export")
+              );
+            });
+          return;
+        // "open-project-file" never arrives here: the main process drives the
+        // picker through window.rescriptOpenProjectPicker instead.
+        case "open-project-file":
+          return;
       }
     },
     [clearRecents, closeProject, syncRecents, t]

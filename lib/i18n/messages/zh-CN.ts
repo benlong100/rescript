@@ -59,6 +59,12 @@ export const zhCN: Record<MessageKey, string> = {
   "editor.undo": "撤销 (⌘Z)",
   "editor.redo": "重做 (⇧⌘Z)",
   "editor.export": "导出",
+  // TODO: translate
+  "editor.saveProject": "Save project",
+  // TODO: translate
+  "editor.openProjectFile": "Open project file",
+  // TODO: translate
+  "upload.openProject": "Open a saved project",
   "topbar.startOver": "重新开始",
   "transcript.replace": "用 SRT、VTT 或 JSON 替换转录文本",
   "transcript.header": "转录文本",
@@ -68,6 +74,12 @@ export const zhCN: Record<MessageKey, string> = {
   "transcript.invalidFile": "请选择 SRT、VTT 或 JSON 转录文本文件。",
   "transcript.noSpeech": "未检测到语音。请确认文件包含音轨，或导入转录文本。",
   "transcript.cut": "剪除",
+  // TODO: translate
+  "transcript.moveLift": "Move",
+  // TODO: translate
+  "transcript.movePlace": "Place here",
+  // TODO: translate
+  "transcript.movePending": "Moving {count} words — click where it should go, then press ⌘⇧V or Place here",
   "transcript.follow": "跟随播放位置",
   "transcript.hideDeleted": "隐藏已删除文字",
   "transcript.showDeleted": "显示已删除文字",

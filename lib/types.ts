@@ -44,12 +44,30 @@ export interface SpeakerInfo {
   name: string;
 }
 
+/**
+ * One reordering operation: lift a source range out of the playback sequence
+ * and re-insert it elsewhere. See lib/segments.ts for why moves are addressed
+ * by source time rather than by segment index.
+ */
+export interface EditMove {
+  id: number;
+  /** The source range being moved, in original media seconds. */
+  srcStart: number;
+  srcEnd: number;
+  /**
+   * Where it lands: immediately before the first kept moment at or after this
+   * source time. `null` means the very beginning of the edit.
+   */
+  insertBeforeSrc: number | null;
+}
+
 /** Snapshot of all edit state for undo/redo. */
 export interface EditSnapshot {
   words: Word[];
   manualCuts: ManualCut[];
   sceneBoundaries: SceneBoundary[];
   speakers: SpeakerInfo[];
+  moves: EditMove[];
 }
 
 /** A contiguous kept segment of media, optionally subdivided by scene boundaries. */

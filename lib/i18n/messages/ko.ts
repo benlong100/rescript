@@ -57,6 +57,12 @@ export const ko: Record<MessageKey, string> = {
   "editor.undo": "실행 취소 (⌘Z)",
   "editor.redo": "다시 실행 (⇧⌘Z)",
   "editor.export": "내보내기",
+  // TODO: translate
+  "editor.saveProject": "Save project",
+  // TODO: translate
+  "editor.openProjectFile": "Open project file",
+  // TODO: translate
+  "upload.openProject": "Open a saved project",
   "topbar.startOver": "처음부터 다시",
   "transcript.replace": "SRT, VTT 또는 JSON에서 자막 바꾸기",
   "transcript.header": "자막",
@@ -66,6 +72,12 @@ export const ko: Record<MessageKey, string> = {
   "transcript.invalidFile": "SRT, VTT 또는 JSON 자막 파일을 선택하세요.",
   "transcript.noSpeech": "음성이 감지되지 않았습니다. 파일에 오디오가 있는지 확인하거나 자막을 가져오세요.",
   "transcript.cut": "컷",
+  // TODO: translate
+  "transcript.moveLift": "Move",
+  // TODO: translate
+  "transcript.movePlace": "Place here",
+  // TODO: translate
+  "transcript.movePending": "Moving {count} words — click where it should go, then press ⌘⇧V or Place here",
   "transcript.follow": "재생 위치 따라가기",
   "transcript.hideDeleted": "삭제된 단어 숨기기",
   "transcript.showDeleted": "삭제된 단어 보기",

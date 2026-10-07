@@ -57,6 +57,12 @@ export const pt: Record<MessageKey, string> = {
   "editor.undo": "Desfazer (⌘Z)",
   "editor.redo": "Refazer (⇧⌘Z)",
   "editor.export": "Exportar",
+  // TODO: translate
+  "editor.saveProject": "Save project",
+  // TODO: translate
+  "editor.openProjectFile": "Open project file",
+  // TODO: translate
+  "upload.openProject": "Open a saved project",
   "topbar.startOver": "Começar de novo",
   "transcript.replace": "Substituir transcrição a partir de SRT, VTT ou JSON",
   "transcript.header": "Transcrição",
@@ -66,6 +72,12 @@ export const pt: Record<MessageKey, string> = {
   "transcript.invalidFile": "Escolha um arquivo de transcrição SRT, VTT ou JSON.",
   "transcript.noSpeech": "Nenhuma fala detectada. Confirme que este arquivo tem áudio, ou importe uma transcrição.",
   "transcript.cut": "Cortar",
+  // TODO: translate
+  "transcript.moveLift": "Move",
+  // TODO: translate
+  "transcript.movePlace": "Place here",
+  // TODO: translate
+  "transcript.movePending": "Moving {count} words — click where it should go, then press ⌘⇧V or Place here",
   "transcript.follow": "Seguir cabeçote",
   "transcript.hideDeleted": "Ocultar palavras excluídas",
   "transcript.showDeleted": "Mostrar palavras excluídas",

@@ -1,3 +1,4 @@
+import { OFFLINE_BUILD } from "./offline";
 export type TranscriptLanguage = "en" | "es" | "fr" | "de" | "pt" | "zh";
 
 export interface TranscriptLanguageInfo {
@@ -64,6 +65,16 @@ export const TRANSCRIPT_LANGUAGE_ORDER: TranscriptLanguage[] = [
   "zh",
 ];
 
+/**
+ * What the language selector may offer. Only the English CTC aligner is
+ * bundled (see scripts/fetch-models.mjs); another language would still
+ * transcribe, but its word boundaries would fall back to the VAD/envelope
+ * heuristic — which is exactly the precision the word-level editing depends
+ * on, so the option is withheld rather than silently degraded.
+ */
+export const SELECTABLE_TRANSCRIPT_LANGUAGES: TranscriptLanguage[] =
+  OFFLINE_BUILD ? ["en"] : TRANSCRIPT_LANGUAGE_ORDER;
+
 export function isTranscriptLanguage(
   value: unknown
 ): value is TranscriptLanguage {
@@ -82,7 +93,14 @@ export function loadTranscriptLanguagePreference(): TranscriptLanguage {
   if (typeof window === "undefined") return DEFAULT_TRANSCRIPT_LANGUAGE;
   try {
     const raw = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    if (isTranscriptLanguage(raw)) return raw;
+    // Clamped: a preference from another build must not select a language
+    // whose aligner this build does not ship.
+    if (
+      isTranscriptLanguage(raw) &&
+      SELECTABLE_TRANSCRIPT_LANGUAGES.includes(raw)
+    ) {
+      return raw;
+    }
   } catch {
     // private mode / disabled storage
   }

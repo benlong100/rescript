@@ -31,6 +31,10 @@ const shared = {
     "process.env.NEXT_PUBLIC_SENTRY_DSN": JSON.stringify(
       process.env.NEXT_PUBLIC_SENTRY_DSN ?? ""
     ),
+    // Air-gapped build: no update server is reachable, so don't poll one.
+    "process.env.NEXT_PUBLIC_OFFLINE_MODELS": JSON.stringify(
+      process.env.NEXT_PUBLIC_OFFLINE_MODELS ?? ""
+    ),
   },
 };
 

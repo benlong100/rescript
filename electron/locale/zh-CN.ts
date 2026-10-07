@@ -3,6 +3,9 @@ import type { DesktopMessageKey } from "./en";
 export const zhCN: Record<DesktopMessageKey, string> = {
   file: "文件",
   openProject: "打开项目…",
+  importMedia: "Import Media…",
+  openProjectFile: "Open Project File…",
+  saveProjectAs: "Save Project As…",
   reopenLast: "重新打开上一个项目",
   recentProjects: "最近项目",
   noRecent: "没有最近项目",
@@ -13,6 +16,8 @@ export const zhCN: Record<DesktopMessageKey, string> = {
   cut: "剪切",
   copy: "复制",
   paste: "粘贴",
+  moveLift: "Move Selection",
+  movePlace: "Place Moved Audio Here",
   pasteMatch: "粘贴并匹配样式",
   delete: "删除",
   selectAll: "全选",

@@ -6,6 +6,7 @@ import type {
   EditorStatus,
   ManualCut,
   ProgressInfo,
+  EditMove,
   SceneBoundary,
   SpeakerInfo,
   TimeRange,
@@ -26,6 +27,16 @@ import {
   shrinkManualCuts,
   trimEdgeResult,
 } from "./edits";
+import {
+  applyMoves,
+  moveSpanForWords,
+  orderWordsForDisplay,
+} from "./segments";
+import {
+  projectFileName,
+  readProjectFile,
+  writeProjectFile,
+} from "./projectFile";
 import { isModelId, loadModelPreference, saveModelPreference } from "./models";
 import { isTranscriptSource, type TranscriptSource } from "./source";
 import { trackEvent } from "./telemetry";
@@ -43,6 +54,7 @@ import {
   deleteProject,
   fileFromProject,
   getProject,
+  putProject,
 } from "./projects";
 import {
   cancelNativeJobs,
@@ -99,6 +111,17 @@ interface PendingTranscript {
   speakers?: SpeakerInfo[];
 }
 
+/**
+ * Material lifted by Cut, waiting for a Paste to say where it goes. Ephemeral
+ * UI state like the selection — deliberately outside the undo snapshot, since
+ * cutting has not changed the edit yet.
+ */
+export interface MoveClipboard {
+  srcStart: number;
+  srcEnd: number;
+  wordIds: number[];
+}
+
 interface EditorState {
   // Media
   videoFile: File | null;
@@ -146,6 +169,10 @@ interface EditorState {
   speakers: SpeakerInfo[];
   manualCuts: ManualCut[];
   sceneBoundaries: SceneBoundary[];
+  /** Reordering applied on top of the keep ranges (see lib/segments.ts). */
+  moves: EditMove[];
+  /** Material cut and awaiting a paste destination. */
+  moveClipboard: MoveClipboard | null;
   showDeleted: boolean;
   past: EditSnapshot[];
   future: EditSnapshot[];
@@ -163,6 +190,7 @@ interface EditorState {
   selectedWordIds: number[];
   nextManualCutId: number;
   nextBoundaryId: number;
+  nextMoveId: number;
   /**
    * When true, subsequent edit mutations coalesce into the undo entry
    * created by `beginGesture` (one undo step per drag).
@@ -186,6 +214,13 @@ interface EditorState {
   ) => void;
   /** Restore a saved project from IndexedDB (no re-transcription). */
   openProject: (id: string) => Promise<void>;
+  /**
+   * Write the whole session to a portable `.rescript` file. Returns false
+   * when there is nothing to save yet.
+   */
+  saveProjectFile: () => Promise<boolean>;
+  /** Open a `.rescript` file, replacing the current session. */
+  openProjectFile: (file: File) => Promise<void>;
   /** Delete a saved project; if it is the active one, resets to the home screen. */
   removeProject: (id: string) => Promise<void>;
   setSource: (s: TranscriptSource) => void;
@@ -235,6 +270,34 @@ interface EditorState {
   cutRanges: (ranges: TimeRange[]) => void;
   /** Restore arbitrary cut ranges (manual cuts + covered deleted words). */
   restoreRanges: (ranges: TimeRange[]) => void;
+  /**
+   * Move a source range so it plays immediately before `insertBeforeSrc`
+   * (`null` = the start of the edit). Returns false when the range is empty or
+   * the destination lies inside it.
+   */
+  moveRange: (
+    srcStart: number,
+    srcEnd: number,
+    insertBeforeSrc: number | null
+  ) => boolean;
+  /** Drop all reordering, returning the edit to source order. */
+  clearMoves: () => void;
+  /** Lift a source range, pending a paste destination. */
+  setMoveClipboard: (clip: MoveClipboard | null) => void;
+  /**
+   * Lift the current word selection, pending a destination. Lives in the store
+   * rather than the transcript panel so the keyboard, the floating toolbar and
+   * the native Edit menu all drive the same code.
+   */
+  liftSelectionForMove: () => boolean;
+  /** Place lifted material in front of the current word selection. */
+  placeMoveBeforeSelection: () => boolean;
+  /**
+   * Place the clipboard before `insertBeforeSrc` (`null` = start of the edit).
+   * Returns false when there is nothing to paste or the destination is inside
+   * the lifted material.
+   */
+  pasteMoveBefore: (insertBeforeSrc: number | null) => boolean;
   /** Cut the currently selected timeline clip out of the edited media. */
   deleteSelectedClip: () => boolean;
   /** Restore the currently selected cut range (deleted clip / silence). */
@@ -304,12 +367,14 @@ function snapshotOf(s: {
   speakers: SpeakerInfo[];
   manualCuts: ManualCut[];
   sceneBoundaries: SceneBoundary[];
+  moves: EditMove[];
 }): EditSnapshot {
   return {
     words: s.words,
     speakers: s.speakers,
     manualCuts: s.manualCuts,
     sceneBoundaries: s.sceneBoundaries,
+    moves: s.moves,
   };
 }
 
@@ -318,9 +383,13 @@ function snapshotsEqual(a: EditSnapshot, b: EditSnapshot): boolean {
     a.words === b.words &&
     a.speakers === b.speakers &&
     a.manualCuts === b.manualCuts &&
-    a.sceneBoundaries === b.sceneBoundaries
+    a.sceneBoundaries === b.sceneBoundaries &&
+    a.moves === b.moves
   );
 }
+
+/** Source-time slop for move bookkeeping (matches lib/segments.ts). */
+const MOVE_EPSILON = 1e-4;
 
 function maxId(items: Array<{ id: number }>, fallback = 1): number {
   return items.reduce((m, x) => Math.max(m, x.id), fallback - 1) + 1;
@@ -340,6 +409,9 @@ function pushEdit(
       | "speakers"
       | "manualCuts"
       | "sceneBoundaries"
+      | "moves"
+      | "moveClipboard"
+      | "nextMoveId"
       | "selectedClipIndex"
       | "selectedCutIndex"
       | "selectedWordIds"
@@ -384,6 +456,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   speakers: [],
   manualCuts: [],
   sceneBoundaries: [],
+  moves: [],
+  moveClipboard: null,
   showDeleted: true,
   past: [],
   future: [],
@@ -392,6 +466,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   selectedWordIds: [],
   nextManualCutId: 1,
   nextBoundaryId: 1,
+  nextMoveId: 1,
   gestureActive: false,
 
   currentTime: 0,
@@ -433,6 +508,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       speakers,
       manualCuts: [],
       sceneBoundaries: [],
+      moves: [],
+      moveClipboard: null,
       past: [],
       future: [],
       selectedClipIndex: null,
@@ -475,6 +552,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     releaseMediaResources(get().videoFile, get().exportResult);
     const manualCuts = record.manualCuts ?? [];
     const sceneBoundaries = record.sceneBoundaries ?? [];
+    const moves = record.moves ?? [];
     const speakers = speakersFromWords(record.words, record.speakers ?? []);
     set({
       videoFile: file,
@@ -494,6 +572,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       speakers,
       manualCuts,
       sceneBoundaries,
+      moves,
       showDeleted: record.showDeleted,
       past: [],
       future: [],
@@ -502,6 +581,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       selectedWordIds: [],
       nextManualCutId: maxId(manualCuts, 1),
       nextBoundaryId: maxId(sceneBoundaries, 1),
+      nextMoveId: maxId(moves, 1),
       partialText: "",
       error: null,
       currentTime: 0,
@@ -513,6 +593,72 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
+  saveProjectFile: async () => {
+    const s = get();
+    if (!s.videoFile || s.words.length === 0) return false;
+
+    const media = new Uint8Array(await s.videoFile.arrayBuffer());
+    const name = s.videoFile.name;
+    const bytes = writeProjectFile(
+      {
+        name: name.replace(/\.[^.]+$/, ""),
+        mediaFileName: name,
+        mediaType: s.videoFile.type,
+        mediaKind: s.mediaKind ?? "audio",
+        duration: s.duration,
+        source: s.source,
+        transcriptLanguage: s.transcriptLanguage,
+        words: s.words,
+        speakers: s.speakers,
+        manualCuts: s.manualCuts,
+        sceneBoundaries: s.sceneBoundaries,
+        moves: s.moves,
+        showDeleted: s.showDeleted,
+      },
+      media,
+      process.env.NEXT_PUBLIC_APP_VERSION ?? ""
+    );
+
+    // Same delivery as every other export in the app: a blob download, which
+    // the desktop shell turns into the OS save sheet.
+    const blob = new Blob([bytes], { type: "application/zip" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = projectFileName(name);
+    a.click();
+    URL.revokeObjectURL(url);
+    return true;
+  },
+  openProjectFile: async (file) => {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    // Throws a human-readable message for anything that is not a project.
+    const { data, media } = readProjectFile(bytes);
+
+    // Store it, then hand off to openProject: that owns media loading, waveform
+    // rebuilding and the status transitions, and this way an opened file is
+    // autosaved locally from then on as well.
+    const id = await putProject({
+      name: data.name,
+      mediaKind: data.mediaKind,
+      duration: data.duration,
+      source: isTranscriptSource(data.source) ? data.source : "base",
+      transcriptLanguage: isTranscriptLanguage(data.transcriptLanguage)
+        ? data.transcriptLanguage
+        : DEFAULT_TRANSCRIPT_LANGUAGE,
+      words: data.words,
+      showDeleted: data.showDeleted,
+      manualCuts: data.manualCuts,
+      sceneBoundaries: data.sceneBoundaries,
+      moves: data.moves,
+      speakers: data.speakers,
+      media: new Blob([media], {
+        type: data.mediaType || "application/octet-stream",
+      }),
+      mediaType: data.mediaType,
+    });
+    await get().openProject(id);
+  },
   removeProject: async (id) => {
     await deleteProject(id);
     if (get().projectId === id) {
@@ -555,6 +701,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       speakers: speakersFromWords(words, speakers ?? []),
       manualCuts: [],
       sceneBoundaries: [],
+      moves: [],
+      moveClipboard: null,
       past: [],
       future: [],
       selectedClipIndex: null,
@@ -580,6 +728,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       speakers: speakersFromWords(words, speakers ?? []),
       manualCuts: [],
       sceneBoundaries: [],
+      moves: [],
+      moveClipboard: null,
       past: [],
       future: [],
       selectedClipIndex: null,
@@ -726,6 +876,79 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       words: result.words,
       manualCuts: result.manualCuts,
       nextManualCutId: result.nextCutId,
+      selectedClipIndex: null,
+      selectedCutIndex: null,
+      selectedWordIds: [],
+    });
+  },
+  moveRange: (srcStart, srcEnd, insertBeforeSrc) => {
+    const s = get();
+    if (srcEnd - srcStart <= MOVE_EPSILON) return false;
+    // Dropping material inside itself is a no-op, not an edit.
+    if (
+      insertBeforeSrc !== null &&
+      insertBeforeSrc > srcStart + MOVE_EPSILON &&
+      insertBeforeSrc < srcEnd - MOVE_EPSILON
+    ) {
+      return false;
+    }
+    const move: EditMove = {
+      id: s.nextMoveId,
+      srcStart,
+      srcEnd,
+      insertBeforeSrc,
+    };
+    pushEdit(get, set, {
+      moves: [...s.moves, move],
+      nextMoveId: s.nextMoveId + 1,
+      selectedClipIndex: null,
+      selectedCutIndex: null,
+      selectedWordIds: [],
+    });
+    return true;
+  },
+  setMoveClipboard: (moveClipboard) => set({ moveClipboard }),
+  liftSelectionForMove: () => {
+    const s = get();
+    // Boundary snapping matters here — see moveSpanForWords().
+    const span = moveSpanForWords(s.words, s.selectedWordIds, s.duration);
+    if (!span) return false;
+    set({
+      moveClipboard: { ...span, wordIds: [...s.selectedWordIds] },
+      selectedWordIds: [],
+    });
+    return true;
+  },
+  placeMoveBeforeSelection: () => {
+    const s = get();
+    if (!s.moveClipboard) return false;
+    if (s.selectedWordIds.length === 0) return false;
+    // Destination is whichever selected word currently reads first, which is
+    // display order, not source order.
+    const ordered = applyMoves(
+      getKeepRanges(getCutRanges(s.words, s.duration, s.manualCuts), s.duration),
+      s.moves
+    );
+    const ids = new Set(s.selectedWordIds);
+    const target = orderWordsForDisplay(s.words, ordered).find((w) =>
+      ids.has(w.id)
+    );
+    if (!target) return false;
+    return s.pasteMoveBefore(target.start);
+  },
+  pasteMoveBefore: (insertBeforeSrc) => {
+    const clip = get().moveClipboard;
+    if (!clip) return false;
+    const ok = get().moveRange(clip.srcStart, clip.srcEnd, insertBeforeSrc);
+    if (ok) set({ moveClipboard: null });
+    return ok;
+  },
+  clearMoves: () => {
+    const s = get();
+    if (s.moves.length === 0) return;
+    pushEdit(get, set, {
+      moves: [],
+      moveClipboard: null,
       selectedClipIndex: null,
       selectedCutIndex: null,
       selectedWordIds: [],
@@ -948,8 +1171,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   undo: () => {
-    const { past, future, words, speakers, manualCuts, sceneBoundaries } =
-      get();
+    const {
+      past,
+      future,
+      words,
+      speakers,
+      manualCuts,
+      sceneBoundaries,
+      moves,
+    } = get();
     if (past.length === 0) return;
     const prev = past[past.length - 1];
     set({
@@ -957,9 +1187,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       speakers: prev.speakers,
       manualCuts: prev.manualCuts,
       sceneBoundaries: prev.sceneBoundaries,
+      moves: prev.moves,
       past: past.slice(0, -1),
       future: [
-        { words, speakers, manualCuts, sceneBoundaries },
+        { words, speakers, manualCuts, sceneBoundaries, moves },
         ...future,
       ],
       selectedClipIndex: null,
@@ -970,8 +1201,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     bumpAutosave();
   },
   redo: () => {
-    const { past, future, words, speakers, manualCuts, sceneBoundaries } =
-      get();
+    const {
+      past,
+      future,
+      words,
+      speakers,
+      manualCuts,
+      sceneBoundaries,
+      moves,
+    } = get();
     if (future.length === 0) return;
     const next = future[0];
     set({
@@ -979,8 +1217,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       speakers: next.speakers,
       manualCuts: next.manualCuts,
       sceneBoundaries: next.sceneBoundaries,
+      moves: next.moves,
       future: future.slice(1),
-      past: pushHistory(past, { words, speakers, manualCuts, sceneBoundaries }),
+      past: pushHistory(past, {
+        words,
+        speakers,
+        manualCuts,
+        sceneBoundaries,
+        moves,
+      }),
       selectedClipIndex: null,
       selectedCutIndex: null,
       selectedWordIds: [],
@@ -1049,6 +1294,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       speakers: [],
       manualCuts: [],
       sceneBoundaries: [],
+      moves: [],
+      moveClipboard: null,
       past: [],
       future: [],
       selectedClipIndex: null,

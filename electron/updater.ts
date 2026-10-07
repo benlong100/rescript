@@ -11,9 +11,17 @@ const CHECK_INTERVAL_MS = 60 * 60 * 1000; // hourly
  * manifests published alongside the installers — no separate update server.
  *
  * Only runs in packaged builds; dev launches never check for updates.
+ *
+ * Skipped outright in an air-gapped build (`npm run dist:offline`): there is no
+ * route to GitHub, so an hourly check would only log failures, and a surprise
+ * update would swap out the bundled models the install depends on.
  */
 export function initAutoUpdater(): void {
   if (!app.isPackaged) return;
+  if (process.env.NEXT_PUBLIC_OFFLINE_MODELS === "1") {
+    log.info("Offline build — auto-updater disabled.");
+    return;
+  }
 
   autoUpdater.logger = log;
   log.transports.file.level = "info";

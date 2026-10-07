@@ -1,6 +1,9 @@
 export const en = {
   file: "File",
   openProject: "Open Project…",
+  importMedia: "Import Media…",
+  openProjectFile: "Open Project File…",
+  saveProjectAs: "Save Project As…",
   reopenLast: "Reopen Last Project",
   recentProjects: "Recent Projects",
   noRecent: "No Recent Projects",
@@ -11,6 +14,8 @@ export const en = {
   cut: "Cut",
   copy: "Copy",
   paste: "Paste",
+  moveLift: "Move Selection",
+  movePlace: "Place Moved Audio Here",
   pasteMatch: "Paste and Match Style",
   delete: "Delete",
   selectAll: "Select All",

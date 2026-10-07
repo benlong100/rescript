@@ -48,7 +48,7 @@ function u32(n: number): Uint8Array {
   return b;
 }
 
-function concat(parts: Uint8Array[]): Uint8Array {
+function concat(parts: Uint8Array[]): Uint8Array<ArrayBuffer> {
   let len = 0;
   for (const p of parts) len += p.length;
   const out = new Uint8Array(len);
@@ -61,7 +61,7 @@ function concat(parts: Uint8Array[]): Uint8Array {
 }
 
 /** Build an uncompressed ZIP archive from path → bytes/string entries. */
-export function zipStore(entries: ZipEntry[]): Uint8Array {
+export function zipStore(entries: ZipEntry[]): Uint8Array<ArrayBuffer> {
   const localParts: Uint8Array[] = [];
   const centralParts: Uint8Array[] = [];
   let offset = 0;

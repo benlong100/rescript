@@ -13,7 +13,13 @@ import {
   isTranscriptLanguage,
 } from "./languages";
 import type { MediaKind } from "./media";
-import type { ManualCut, SceneBoundary, SpeakerInfo, Word } from "./types";
+import type {
+  EditMove,
+  ManualCut,
+  SceneBoundary,
+  SpeakerInfo,
+  Word,
+} from "./types";
 
 const DB_NAME = "rescript-projects";
 const DB_VERSION = 1;
@@ -47,6 +53,8 @@ export interface ProjectRecord extends ProjectMeta {
   manualCuts?: ManualCut[];
   /** Scene split points in original media time (optional for older saves). */
   sceneBoundaries?: SceneBoundary[];
+  /** Reordering applied on top of the keep ranges (optional for older saves). */
+  moves?: EditMove[];
   /** Named speakers (optional for older saves — derived from words when missing). */
   speakers?: SpeakerInfo[];
   /** Original media bytes. */
@@ -195,6 +203,7 @@ export async function putProject(input: ProjectWrite): Promise<string> {
     words: input.words,
     showDeleted: input.showDeleted,
     manualCuts: input.manualCuts ?? [],
+    moves: input.moves ?? [],
     sceneBoundaries: input.sceneBoundaries ?? [],
     speakers: input.speakers ?? [],
     media: input.media,

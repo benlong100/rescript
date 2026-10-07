@@ -171,7 +171,6 @@ function main() {
       { ...video, kind: "gif" },
       { ...video, keepRanges: [] },
       { ...video, keepRanges: [{ start: 2, end: 1 }] },
-      { ...video, keepRanges: [{ start: 0, end: 2 }, { start: 1, end: 3 }] },
       { ...video, keepRanges: [{ start: Number.NaN, end: 1 }] },
       { ...video, keepRanges: [{ start: "0;[0:v]", end: 1 }] },
       { ...video, editedDuration: -1 },
@@ -184,6 +183,30 @@ function main() {
     bad.forEach((request, i) => {
       eq(parseExportRequest(request), null, `malformed request #${i} is rejected`);
     });
+
+    // Out-of-source-order ranges are VALID and must survive in sequence order.
+    //
+    // Keep ranges used to be the complement of sorted cuts, so ascending order
+    // was a free sanity check and this case belonged in `bad` above. Reordering
+    // (lib/segments.ts) makes the array a playback sequence instead, in which
+    // moved material legitimately appears out of source order. Rejecting it
+    // here meant the desktop render refused every moved edit while the preview
+    // played it correctly.
+    const reordered = parseExportRequest({
+      ...audio,
+      keepRanges: [
+        { start: 0, end: 0.2 },
+        { start: 4, end: 6.2 },
+        { start: 0.2, end: 4 },
+        { start: 6.2, end: 8.4 },
+      ],
+    });
+    assert(reordered !== null, "a reordered sequence is accepted");
+    eq(
+      reordered.keepRanges.map((r) => r.start).join(","),
+      "0,4,0.2,6.2",
+      "the sequence order is preserved, not sorted"
+    );
 
     // Extra fields are dropped rather than passed through to the builder.
     const extra = parseExportRequest({
