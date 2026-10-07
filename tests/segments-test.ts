@@ -319,4 +319,87 @@ function shape(ranges: TimeRange[]): string {
   assert(moveSpanForWords([word(1, "a", 0, 1)], [], 2) === null, "empty selection");
 }
 
+// --- Regression: a second move into already-reordered material ---
+//
+// "This is sentence one. That was sentence Two. There goes sentence three."
+// First move sentence two to the front, then move the word "sentence" out of
+// it and into sentence one. The second insertion point must land on the seam
+// inside sentence one — not at the front of the edit, which is where a
+// "first start >= target" lookup puts it once the sequence is no longer sorted
+// by source time.
+{
+  const words = [
+    word(1, "This", 0.0, 0.4),
+    word(2, "is", 0.45, 0.6),
+    word(3, "sentence", 0.65, 1.2),
+    word(4, "one", 1.25, 1.8),
+    word(5, "That", 2.0, 2.4),
+    word(6, "was", 2.45, 2.6),
+    word(7, "sentence", 2.65, 3.2),
+    word(8, "Two", 3.25, 3.8),
+    word(9, "There", 4.0, 4.4),
+    word(10, "goes", 4.45, 4.6),
+    word(11, "sentence", 4.65, 5.2),
+    word(12, "three", 5.25, 5.8),
+  ];
+  const DUR = 6.0;
+  const keeps: TimeRange[] = [{ start: 0, end: DUR }];
+  const reading = (ms: EditMove[]) =>
+    orderWords(words, applyMoves(keeps, ms))
+      .map((w) => w.text)
+      .join(" ");
+
+  const whole = moveSpanForWords(words, [5, 6, 7, 8], DUR);
+  assert(whole !== null, "span for sentence two");
+  const first: EditMove = {
+    id: 1,
+    srcStart: whole.srcStart,
+    srcEnd: whole.srcEnd,
+    insertBeforeSrc: 0.0,
+  };
+  assert(
+    reading([first]) ===
+      "That was sentence Two This is sentence one There goes sentence three",
+    `first move: ${reading([first])}`
+  );
+
+  const oneWord = moveSpanForWords(words, [7], DUR);
+  assert(oneWord !== null, "span for the single word");
+  const second: EditMove = {
+    id: 2,
+    srcStart: oneWord.srcStart,
+    srcEnd: oneWord.srcEnd,
+    insertBeforeSrc: 0.65, // before "sentence" in sentence one
+  };
+  const after = reading([first, second]);
+  assert(
+    after ===
+      "That was Two This is sentence sentence one There goes sentence three",
+    `second move landed wrong: ${after}`
+  );
+  assert(
+    orderWords(words, applyMoves(keeps, [first, second])).length === words.length,
+    "no word may be dropped or duplicated by composed moves"
+  );
+}
+
+// --- A move into the middle of a reordered sequence, in isolation ---
+{
+  const keeps: TimeRange[] = [
+    { start: 0, end: 2 },
+    { start: 2, end: 4 },
+    { start: 4, end: 6 },
+  ];
+  // 4-6 to the front, then 0-2 placed before source time 5 (inside the moved
+  // block, which now sits first). The seam is what must be found.
+  const out = applyMoves(keeps, [
+    move(1, 4, 6, null),
+    move(2, 0, 2, 5),
+  ]);
+  assert(
+    shape(out) === "4.00-5.00 0.00-2.00 5.00-6.00 2.00-4.00",
+    `insertion into reordered material: ${shape(out)}`
+  );
+}
+
 console.log("segments: all checks passed");

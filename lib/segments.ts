@@ -75,9 +75,43 @@ export function applyMove(ordered: TimeRange[], move: EditMove): TimeRange[] {
   if (target === null) return [...removed, ...kept];
 
   const seamed = splitAtSrc(kept, target);
-  const idx = seamed.findIndex((r) => r.start >= target - EPS);
-  const at = idx === -1 ? seamed.length : idx;
-  return [...seamed.slice(0, at), ...removed, ...seamed.slice(at)];
+  return insertAt(seamed, removed, target);
+}
+
+/**
+ * Splice `material` in at the seam beginning at source time `target`.
+ *
+ * Addressed by an exact match on the seam `splitAtSrc` just created, *not* by
+ * the first entry whose start is at or after the target. Once anything has been
+ * moved, the sequence is no longer sorted by source time, so "first start >=
+ * target" picks an arbitrary earlier position: moving a word into a sentence
+ * that had already been relocated put it at the very front of the edit instead.
+ * A seam is unique, because no source moment appears twice in the sequence.
+ */
+function insertAt(
+  seamed: TimeRange[],
+  material: TimeRange[],
+  target: number
+): TimeRange[] {
+  let at = seamed.findIndex((r) => Math.abs(r.start - target) < EPS);
+
+  if (at < 0) {
+    // No seam: the target sits inside cut material (a deleted word can still
+    // be selected when deleted words are shown). Aim for the nearest kept
+    // moment after it, wherever that now sits in the sequence.
+    let best = -1;
+    for (let i = 0; i < seamed.length; i++) {
+      if (
+        seamed[i].start >= target - EPS &&
+        (best < 0 || seamed[i].start < seamed[best].start)
+      ) {
+        best = i;
+      }
+    }
+    at = best < 0 ? seamed.length : best;
+  }
+
+  return [...seamed.slice(0, at), ...material, ...seamed.slice(at)];
 }
 
 /**

@@ -55,6 +55,19 @@ audio and clip it instead — the same bug one seam to the left.
 `tests/segments-test.ts` has the regression case with the exact transcript that
 exposed it.
 
+### Insertion points are seams, not "the first range at or after"
+
+`insertAt()` splices material in at the entry whose start matches the target
+source time **exactly** — the seam `splitAtSrc()` just created. It must not scan
+for the first entry whose start is at or after the target: once anything has
+been moved the sequence is no longer sorted by source time, so that scan picks
+an arbitrary earlier position.
+
+The symptom: move a sentence to the front, then move a word out of it into a
+different sentence, and the word lands at the very front of the edit instead of
+where it was dropped. A seam is unique because no source moment appears twice in
+the sequence. `tests/segments-test.ts` carries the exact two-move case.
+
 Residual: if the first moved word's *onset* timestamp is late, its start can
 clip. That is true of every cut in the app already, and the timeline's
 draggable word edges are the existing fix.
