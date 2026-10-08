@@ -150,6 +150,8 @@ export const en = {
   "speaker.rename": "Rename speaker",
   "speaker.renameAction": "Rename",
   "speaker.replace": "Replace in project with…",
+  "speaker.mergePrevious": "Merge with speaker above",
+  "speaker.mergePreviousTitle": "This is not a new speaker — join this text to the turn above",
   "speaker.removeProject": "Remove from project",
   "speaker.newName": "New name",
   "speaker.find": "Find a speaker…",

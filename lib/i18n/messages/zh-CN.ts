@@ -180,6 +180,10 @@ export const zhCN: Record<MessageKey, string> = {
   "speaker.rename": "重命名说话人",
   "speaker.renameAction": "重命名",
   "speaker.replace": "在整个项目中替换为…",
+  // TODO: translate
+  "speaker.mergePrevious": "Merge with speaker above",
+  // TODO: translate
+  "speaker.mergePreviousTitle": "This is not a new speaker — join this text to the turn above",
   "speaker.removeProject": "从项目中移除",
   "speaker.newName": "新名称",
   "speaker.find": "查找说话人…",

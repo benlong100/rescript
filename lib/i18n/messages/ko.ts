@@ -178,6 +178,10 @@ export const ko: Record<MessageKey, string> = {
   "speaker.rename": "화자 이름 변경",
   "speaker.renameAction": "이름 변경",
   "speaker.replace": "프로젝트에서 다음으로 바꾸기…",
+  // TODO: translate
+  "speaker.mergePrevious": "Merge with speaker above",
+  // TODO: translate
+  "speaker.mergePreviousTitle": "This is not a new speaker — join this text to the turn above",
   "speaker.removeProject": "프로젝트에서 제거",
   "speaker.newName": "새 이름",
   "speaker.find": "화자 찾기…",

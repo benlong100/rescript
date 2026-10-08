@@ -178,6 +178,10 @@ export const ja: Record<MessageKey, string> = {
   "speaker.rename": "話者名を変更",
   "speaker.renameAction": "名前を変更",
   "speaker.replace": "プロジェクト内で置き換え…",
+  // TODO: translate
+  "speaker.mergePrevious": "Merge with speaker above",
+  // TODO: translate
+  "speaker.mergePreviousTitle": "This is not a new speaker — join this text to the turn above",
   "speaker.removeProject": "プロジェクトから削除",
   "speaker.newName": "新しい名前",
   "speaker.find": "話者を検索…",

@@ -51,6 +51,31 @@ export function speakersFromWords(
     .map((id) => byId.get(id) ?? { id, name: defaultSpeakerName(id) });
 }
 
+/**
+ * Drop speakers that have no words left *and* still carry their default name.
+ *
+ * {@link speakersFromWords} deliberately keeps speakers with no words, which is
+ * right for ones the user added by hand ahead of assigning them. But a speaker
+ * left empty that was never renamed was invented by diarization and claimed by
+ * nobody, so keeping it only clutters the pickers.
+ *
+ * Never returns an empty list: with no words at all, the speakers are left
+ * alone rather than wiped.
+ */
+export function pruneUnclaimedSpeakers(
+  words: Word[],
+  speakers: SpeakerInfo[]
+): SpeakerInfo[] {
+  const used = new Set<number>();
+  for (const w of words) {
+    if (w.speaker >= 0) used.add(w.speaker);
+  }
+  const kept = speakers.filter(
+    (sp) => used.has(sp.id) || sp.name !== defaultSpeakerName(sp.id)
+  );
+  return kept.length > 0 ? kept : speakers;
+}
+
 export function nextSpeakerId(speakers: SpeakerInfo[]): number {
   return speakers.reduce((m, s) => Math.max(m, s.id), -1) + 1;
 }

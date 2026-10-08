@@ -556,13 +556,16 @@ export default function TranscriptPanel() {
 
           {status === "ready" && (
             <div className="transcript-words selection:bg-transparent">
-              {turns.map((turn) => {
+              {turns.map((turn, turnIndex) => {
                 const visible = showDeleted
                   ? turn.words
                   : turn.words.filter((w) => !cutOutIds.has(w.id));
                 if (visible.length === 0) return null;
                 // First turn in the full word list has no previous speaker to borrow from.
                 const canMove = turn.words[0].id !== words[0]?.id;
+                // Rendered order, so "above" means what the reader sees.
+                const previousSpeakerId =
+                  turnIndex > 0 ? turns[turnIndex - 1].speaker : undefined;
                 return (
                   <div key={`${turn.speaker}-${turn.words[0].id}`} className="mb-7">
                     <SpeakerLabel
@@ -570,6 +573,7 @@ export default function TranscriptPanel() {
                       turnWordIds={turn.words.map((w) => w.id)}
                       turnStartWordId={turn.words[0].id}
                       canMove={canMove}
+                      previousSpeakerId={previousSpeakerId}
                     />
                     <p className="select-text text-[15px] leading-8">
                       {visible.map((w) => {

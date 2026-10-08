@@ -7,6 +7,7 @@ import {
   defaultSpeakerName,
   findSpeakerByName,
   moveSpeakerBoundary,
+  pruneUnclaimedSpeakers,
   reassignWords,
   removeSpeaker,
   renameSpeaker,
@@ -138,6 +139,74 @@ function w(
   assert(removeFirst !== null, "remove first");
   assert(removeFirst!.words[0].speaker === 1, "first → next");
   console.log("remove: ok");
+}
+
+// --- Merging a spurious turn away drops the speaker diarization invented ---
+//
+// The case this exists for: diarization splits one person in two, the user
+// folds the stray turn into the speaker above, and "Speaker 2" should not go on
+// haunting the pickers with nothing left to say.
+{
+  const words = [w(1, "hello", 0), w(2, "there", 0), w(3, "again", 0)];
+  const speakers: SpeakerInfo[] = [
+    { id: 0, name: defaultSpeakerName(0) },
+    { id: 1, name: defaultSpeakerName(1) },
+  ];
+  const pruned = pruneUnclaimedSpeakers(words, speakers);
+  assert(
+    pruned.length === 1 && pruned[0].id === 0,
+    `empty default-named speaker should go: ${JSON.stringify(pruned)}`
+  );
+}
+
+// --- A speaker the user named is kept even with no words ---
+{
+  const words = [w(1, "hello", 0)];
+  const speakers: SpeakerInfo[] = [
+    { id: 0, name: defaultSpeakerName(0) },
+    { id: 1, name: "Narrator" },
+  ];
+  const pruned = pruneUnclaimedSpeakers(words, speakers);
+  assert(
+    pruned.length === 2 && pruned.some((s) => s.name === "Narrator"),
+    "a named speaker survives having no words yet"
+  );
+}
+
+// --- Speakers in use are never dropped, named or not ---
+{
+  const words = [w(1, "a", 0), w(2, "b", 1)];
+  const speakers: SpeakerInfo[] = [
+    { id: 0, name: defaultSpeakerName(0) },
+    { id: 1, name: defaultSpeakerName(1) },
+  ];
+  assert(
+    pruneUnclaimedSpeakers(words, speakers).length === 2,
+    "both speakers still have words"
+  );
+}
+
+// --- Never wipes the list entirely ---
+{
+  const speakers: SpeakerInfo[] = [{ id: 0, name: defaultSpeakerName(0) }];
+  assert(
+    pruneUnclaimedSpeakers([], speakers).length === 1,
+    "with no words at all, speakers are left alone"
+  );
+}
+
+// --- Words with no speaker (-1) do not count as claiming one ---
+{
+  const words = [{ ...w(1, "a", 0), speaker: -1 }];
+  const speakers: SpeakerInfo[] = [
+    { id: 0, name: defaultSpeakerName(0) },
+    { id: 1, name: "Guest" },
+  ];
+  const pruned = pruneUnclaimedSpeakers(words, speakers);
+  assert(
+    pruned.length === 1 && pruned[0].name === "Guest",
+    `unassigned words claim nobody: ${JSON.stringify(pruned)}`
+  );
 }
 
 console.log("ALL SPEAKER TESTS PASSED");

@@ -178,6 +178,10 @@ export const zhTW: Record<MessageKey, string> = {
   "speaker.rename": "重新命名說話人",
   "speaker.renameAction": "重新命名",
   "speaker.replace": "在專案中取代為…",
+  // TODO: translate
+  "speaker.mergePrevious": "Merge with speaker above",
+  // TODO: translate
+  "speaker.mergePreviousTitle": "This is not a new speaker — join this text to the turn above",
   "speaker.removeProject": "從專案移除",
   "speaker.newName": "新名稱",
   "speaker.find": "尋找說話人…",

@@ -11,6 +11,7 @@ import {
   type RefObject,
 } from "react";
 import {
+  ArrowUpToLine,
   Check,
   ChevronDown,
   GripVertical,
@@ -49,6 +50,7 @@ export default function SpeakerLabel({
   turnWordIds,
   turnStartWordId,
   canMove,
+  previousSpeakerId,
 }: {
   speakerId: number;
   /** All word ids in this speaker turn (for Change speaker). */
@@ -56,6 +58,12 @@ export default function SpeakerLabel({
   turnStartWordId: number;
   /** False for the first turn — nothing to merge a boundary against. */
   canMove: boolean;
+  /**
+   * Speaker of the turn rendered immediately above, or undefined for the first
+   * turn. Taken from the rendered order rather than recomputed, so "above"
+   * means what the reader sees even after material has been moved.
+   */
+  previousSpeakerId?: number;
 }) {
   const { t } = useI18n();
   const speakers = useEditorStore((s) => s.speakers);
@@ -66,6 +74,7 @@ export default function SpeakerLabel({
     (s) => s.removeSpeakerFromProject
   );
   const moveSpeakerLabel = useEditorStore((s) => s.moveSpeakerLabel);
+  const mergeTurnIntoSpeaker = useEditorStore((s) => s.mergeTurnIntoSpeaker);
 
   const label = speakerLabel(speakers, speakerId);
   const displayLabel = localizedSpeakerName(label, t);
@@ -378,6 +387,18 @@ export default function SpeakerLabel({
               label={t("speaker.renameAction")}
               onClick={() => openPicker("rename")}
             />
+            {previousSpeakerId !== undefined &&
+              previousSpeakerId !== speakerId && (
+                <MenuItem
+                  icon={ArrowUpToLine}
+                  label={t("speaker.mergePrevious")}
+                  title={t("speaker.mergePreviousTitle")}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    mergeTurnIntoSpeaker(turnWordIds, previousSpeakerId);
+                  }}
+                />
+              )}
             <MenuItem
               icon={Replace}
               label={t("speaker.replace")}
@@ -574,12 +595,15 @@ function SpeakerOption({
 function MenuItem({
   icon: Icon,
   label,
+  title,
   onClick,
   disabled,
   danger,
 }: {
   icon: typeof Trash2;
   label: string;
+  /** Hover explanation, for items whose label cannot carry the whole idea. */
+  title?: string;
   onClick: () => void;
   disabled?: boolean;
   danger?: boolean;
@@ -588,6 +612,7 @@ function MenuItem({
     <button
       type="button"
       role="menuitem"
+      title={title}
       disabled={disabled}
       onClick={onClick}
       className={`flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-[13px] transition disabled:cursor-default disabled:opacity-40 ${

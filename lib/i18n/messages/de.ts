@@ -178,6 +178,10 @@ export const de: Record<MessageKey, string> = {
   "speaker.rename": "Sprecher umbenennen",
   "speaker.renameAction": "Umbenennen",
   "speaker.replace": "Im Projekt ersetzen durch…",
+  // TODO: translate
+  "speaker.mergePrevious": "Merge with speaker above",
+  // TODO: translate
+  "speaker.mergePreviousTitle": "This is not a new speaker — join this text to the turn above",
   "speaker.removeProject": "Aus Projekt entfernen",
   "speaker.newName": "Neuer Name",
   "speaker.find": "Sprecher suchen…",

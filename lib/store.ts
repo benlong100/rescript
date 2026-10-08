@@ -66,6 +66,7 @@ import {
 import {
   addSpeaker as addSpeakerEntry,
   findSpeakerByName,
+  pruneUnclaimedSpeakers,
   moveSpeakerBoundary,
   reassignWords,
   removeSpeaker as removeSpeakerEntry,
@@ -263,6 +264,12 @@ interface EditorState {
   ) => void;
   /** Move a turn's start to `targetWordId` (boundary with the previous turn). */
   moveSpeakerLabel: (turnStartWordId: number, targetWordId: number) => void;
+  /**
+   * Fold one turn into another speaker, for when diarization split a single
+   * person in two. Unlike `replaceSpeakerInProject`, the speaker survives
+   * anywhere else they legitimately appear.
+   */
+  mergeTurnIntoSpeaker: (wordIds: number[], toSpeaker: number) => void;
   /** Merge all of `fromId` into `toId` across the project. */
   replaceSpeakerInProject: (fromId: number, toId: number) => void;
   /** Remove a speaker; their turns join the speaker above in the script. */
@@ -810,6 +817,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (words === s.words) return;
     const speakers = speakersFromWords(words, s.speakers);
     pushEdit(get, set, { words, speakers });
+  },
+
+  mergeTurnIntoSpeaker: (wordIds, toSpeaker) => {
+    if (wordIds.length === 0) return;
+    const s = get();
+    const words = reassignWords(s.words, wordIds, toSpeaker);
+    if (words === s.words) return;
+
+    pushEdit(get, set, {
+      words,
+      speakers: pruneUnclaimedSpeakers(words, speakersFromWords(words, s.speakers)),
+    });
   },
 
   changeTurnSpeaker: (wordIds, toSpeaker, name) => {

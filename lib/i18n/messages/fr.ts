@@ -178,6 +178,10 @@ export const fr: Record<MessageKey, string> = {
   "speaker.rename": "Renommer le locuteur",
   "speaker.renameAction": "Renommer",
   "speaker.replace": "Remplacer dans le projet par…",
+  // TODO: translate
+  "speaker.mergePrevious": "Merge with speaker above",
+  // TODO: translate
+  "speaker.mergePreviousTitle": "This is not a new speaker — join this text to the turn above",
   "speaker.removeProject": "Retirer du projet",
   "speaker.newName": "Nouveau nom",
   "speaker.find": "Rechercher un locuteur…",
