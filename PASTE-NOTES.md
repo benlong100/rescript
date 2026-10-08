@@ -197,6 +197,11 @@ read as a state rather than a choice.
 Colour is irrelevant to the tools: any marker counts as a keeper. Per-colour
 tools ("remove everything but the green") would be a small addition on top.
 
+The swatch matching the selection's current colour is ringed.
+`sharedHighlight()` returns that colour only when every selected word agrees;
+mixed colours, a partly-unmarked selection, and no selection all return null
+and ring nothing, since none of them has a single current colour to show.
+
 ### Reading a mark
 
 Always through `highlightOf(word)`, never the field directly. Highlighting was

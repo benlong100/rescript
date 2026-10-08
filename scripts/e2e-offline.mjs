@@ -243,7 +243,16 @@ async function checkHighlighting(win) {
     if (marks.length === 0) return 'nothing-marked';
     const colour = marks[0].getAttribute('data-highlighted');
     if (colour !== 'green') return 'wrong-colour:' + colour;
-    const count = marks.length + ' green';
+
+    // The toolbar should now ring green, and only green.
+    const rung = [...document.querySelectorAll('button[aria-label^="Highlight "]')]
+      .filter((b) => b.getAttribute('aria-pressed') === 'true')
+      .map((b) => b.getAttribute('aria-label'));
+    const ring =
+      rung.length === 1 && rung[0] === 'Highlight green'
+        ? 'ring:green'
+        : 'ring:' + (rung.join('+') || 'none');
+    const count = marks.length + ' green ' + ring;
 
     // The Tools menu should now offer the unhighlighted actions.
     const tools = [...document.querySelectorAll('button')].find(

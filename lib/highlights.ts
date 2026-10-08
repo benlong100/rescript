@@ -120,6 +120,35 @@ export function setHighlight(
   return changed ? next : words;
 }
 
+/**
+ * The one colour every word in `ids` carries, or null.
+ *
+ * Null covers three cases deliberately treated the same: the words disagree,
+ * at least one is unmarked, or there is no selection. All three mean "there is
+ * no single current colour to show", so the toolbar rings nothing rather than
+ * implying the selection is something it is not.
+ */
+export function sharedHighlight(
+  words: Word[],
+  ids: Iterable<number>
+): HighlightColor | null {
+  const target = new Set(ids);
+  if (target.size === 0) return null;
+
+  let shared: HighlightColor | null = null;
+  let seen = 0;
+  for (const w of words) {
+    if (!target.has(w.id)) continue;
+    seen++;
+    const color = highlightOf(w);
+    if (color === null) return null;
+    if (shared === null) shared = color;
+    else if (shared !== color) return null;
+  }
+  // Ids that match no word cannot vouch for a colour.
+  return seen > 0 ? shared : null;
+}
+
 /** The words to render when unhighlighted ones are hidden. */
 export function visibleWords(words: Word[], showUnhighlighted: boolean): Word[] {
   if (showUnhighlighted || !hasHighlights(words)) return words;

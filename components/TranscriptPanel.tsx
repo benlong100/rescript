@@ -25,6 +25,7 @@ import {
   HIGHLIGHT_COLORS,
   highlightedIds as highlightedWordIds,
   highlightOf,
+  sharedHighlight,
   visibleWords,
   type HighlightColor,
 } from "@/lib/highlights";
@@ -209,6 +210,7 @@ export default function TranscriptPanel() {
     [words]
   );
 
+
   // Splits get a joinable edit boundary in the transcript, like the timeline's
   // marker. Splits at the edge of a skipped region are inert and hidden in both.
   const splitBeforeWordId = useMemo(
@@ -246,6 +248,12 @@ export default function TranscriptPanel() {
     highlightedIds,
     freezeSelectionRef,
   });
+
+  /** Colour shared by the whole selection, or null — rings that swatch. */
+  const selectionColor = useMemo(
+    () => (selection ? sharedHighlight(words, selection.ids) : null),
+    [selection, words]
+  );
 
   const {
     showFollowControl,
@@ -674,15 +682,23 @@ export default function TranscriptPanel() {
                   role="group"
                   aria-label={t("transcript.highlight")}
                 >
-                  {HIGHLIGHT_COLORS.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => highlightSelection(color)}
-                      title={t(HIGHLIGHT_LABEL_KEY[color])}
-                      aria-label={t(HIGHLIGHT_LABEL_KEY[color])}
-                      className={`h-4 w-4 cursor-pointer rounded-full ring-1 ring-black/10 transition hover:scale-115 dark:ring-white/20 ${HIGHLIGHT_SWATCH_CLASS[color]}`}
-                    />
-                  ))}
+                  {HIGHLIGHT_COLORS.map((color) => {
+                    const current = selectionColor === color;
+                    return (
+                      <button
+                        key={color}
+                        onClick={() => highlightSelection(color)}
+                        title={t(HIGHLIGHT_LABEL_KEY[color])}
+                        aria-label={t(HIGHLIGHT_LABEL_KEY[color])}
+                        aria-pressed={current}
+                        className={`h-4 w-4 cursor-pointer rounded-full transition hover:scale-115 ${
+                          current
+                            ? "ring-2 ring-zinc-900 ring-offset-1 ring-offset-white dark:ring-white dark:ring-offset-zinc-800"
+                            : "ring-1 ring-black/10 dark:ring-white/20"
+                        } ${HIGHLIGHT_SWATCH_CLASS[color]}`}
+                      />
+                    );
+                  })}
                 </span>
                 {selection.anyHighlighted && (
                   <button

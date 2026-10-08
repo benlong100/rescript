@@ -18,6 +18,7 @@ import {
   isHighlightColor,
   isHighlighted,
   setHighlight,
+  sharedHighlight,
   unhighlightedIds,
   unhighlightedKeptIds,
   visibleWords,
@@ -199,6 +200,33 @@ function legacyMarked(id: number, text: string): Word {
   const words = [word(1, "a", true, "blue"), word(2, "b")];
   assert(hasHighlights(words), "a deleted word can still be marked");
   assert(unhighlightedKeptIds(words).join() === "2", "it is not re-deleted");
+}
+
+// --- The selection's current colour, for the toolbar ring ---
+{
+  const words = [
+    word(1, "a", false, "blue"),
+    word(2, "b", false, "blue"),
+    word(3, "c", false, "pink"),
+    word(4, "d"),
+    legacyMarked(5, "old"),
+  ];
+
+  assert(sharedHighlight(words, [1, 2]) === "blue", "agreeing words share a colour");
+  assert(sharedHighlight(words, [1]) === "blue", "a single word shares its own colour");
+  assert(sharedHighlight(words, [1, 3]) === null, "disagreeing words share nothing");
+  assert(sharedHighlight(words, [1, 4]) === null, "an unmarked word means no shared colour");
+  assert(sharedHighlight(words, [4]) === null, "an unmarked word alone is null");
+  assert(sharedHighlight(words, []) === null, "no selection is null");
+  assert(sharedHighlight(words, [99]) === null, "ids matching no word vouch for nothing");
+  assert(
+    sharedHighlight(words, [5]) === DEFAULT_HIGHLIGHT,
+    "a pre-colour mark reports the default colour"
+  );
+  assert(
+    sharedHighlight(words, [1, 5]) === null,
+    "blue and a legacy yellow mark disagree"
+  );
 }
 
 console.log("highlights: all checks passed");
