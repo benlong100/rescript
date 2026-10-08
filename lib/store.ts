@@ -37,7 +37,11 @@ import {
   readProjectFile,
   writeProjectFile,
 } from "./projectFile";
-import { setHighlighted, unhighlightedKeptIds } from "./highlights";
+import {
+  setHighlight,
+  unhighlightedKeptIds,
+  type HighlightColor,
+} from "./highlights";
 import { isModelId, loadModelPreference, saveModelPreference } from "./models";
 import { isTranscriptSource, type TranscriptSource } from "./source";
 import { trackEvent } from "./telemetry";
@@ -338,8 +342,8 @@ interface EditorState {
   undo: () => void;
   redo: () => void;
   toggleShowDeleted: () => void;
-  /** Mark or unmark words as keepers. */
-  setWordsHighlighted: (ids: number[], on: boolean) => void;
+  /** Mark words with a colour, or clear the marker with `null`. */
+  setWordsHighlighted: (ids: number[], color: HighlightColor | null) => void;
   /** Cut everything not marked. No-op until something is marked. */
   removeUnhighlighted: () => void;
   toggleShowUnhighlighted: () => void;
@@ -1295,9 +1299,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set((s) => ({ showDeleted: !s.showDeleted }));
     bumpAutosave();
   },
-  setWordsHighlighted: (ids, on) => {
+  setWordsHighlighted: (ids, color) => {
     const s = get();
-    const words = setHighlighted(s.words, ids, on);
+    const words = setHighlight(s.words, ids, color);
     // Same array back means nothing changed — don't spend a history entry.
     if (words === s.words) return;
     pushEdit(get, set, { words }, { affectsRender: false });

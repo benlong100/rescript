@@ -107,6 +107,16 @@ export const zhCN: Record<MessageKey, string> = {
   // TODO: translate
   "transcript.highlight": "Highlight",
   // TODO: translate
+  "highlight.yellow": "Highlight yellow",
+  // TODO: translate
+  "highlight.green": "Highlight green",
+  // TODO: translate
+  "highlight.blue": "Highlight blue",
+  // TODO: translate
+  "highlight.purple": "Highlight purple",
+  // TODO: translate
+  "highlight.pink": "Highlight pink",
+  // TODO: translate
   "transcript.unhighlight": "Remove highlight",
   // TODO: translate
   "tools.hideUnhighlighted": "Hide unhighlighted",

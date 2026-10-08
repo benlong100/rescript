@@ -181,16 +181,39 @@ a plain Export button.
 
 ## Highlighting (mark your keepers)
 
-Select words and press **Highlight** on the floating toolbar; they turn yellow.
-**Remove highlight** clears them. Then the transcript Tools menu offers:
+Select words and pick one of **five colours** from the swatch row on the
+floating toolbar. **Remove highlight** clears them. Then the Tools menu offers:
 
 - **Hide unhighlighted** / **Show unhighlighted** — a view filter, so you can
   read back only the bits you marked.
 - **Remove unhighlighted** — cuts everything you did not mark.
 
 `lib/highlights.ts` holds the logic, all of it pure functions over the word
-list. `Word.highlighted` is optional so saves and transcripts written before
-the feature still load.
+list. The palette is yellow, green, blue, purple, pink — **red and amber are
+deliberately absent**, because red is how deleted words are drawn and amber
+marks hesitation placeholders and lifted material. A marker in either would
+read as a state rather than a choice.
+
+Colour is irrelevant to the tools: any marker counts as a keeper. Per-colour
+tools ("remove everything but the green") would be a small addition on top.
+
+### Reading a mark
+
+Always through `highlightOf(word)`, never the field directly. Highlighting was
+a boolean (`Word.highlighted`) before colours, so that one function is the only
+place that understands both, and every caller gets the migration for free:
+
+- a pre-colour mark reads as the default colour (yellow);
+- `setHighlight` strips the deprecated field whenever it writes, so projects
+  migrate as words are touched;
+- clearing deletes **both** fields. An early version only removed the
+  deprecated boolean, which left a cleared word still carrying its colour —
+  caught by `tests/highlights-test.ts`, which is why that file checks the
+  absence of keys rather than just values.
+
+Verified in both directions: a pre-colour project file and a pre-colour
+transcript JSON both load with their marks intact, and nothing writes the old
+boolean back out.
 
 **A highlight is an annotation, not an edit to the media.** Two consequences
 worth keeping:

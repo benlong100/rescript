@@ -1,5 +1,6 @@
 import { en } from "@/lib/i18n/messages/en";
 import { defaultSpeakerName, speakersFromWords } from "./speakers";
+import { DEFAULT_HIGHLIGHT, isHighlightColor } from "./highlights";
 import type { SpeakerInfo, Word } from "./types";
 
 /** Caption / transcript files we can turn into timed words. */
@@ -146,7 +147,13 @@ function wordsFromJson(text: string): ParsedTranscript {
       end: Math.max(s + 0.02, end),
       speaker,
       deleted: Boolean(r.deleted),
-      ...(r.highlighted === true ? { highlighted: true as const } : {}),
+      // Accepts the pre-colour boolean so transcripts exported before colours
+      // keep their marks, in the default colour.
+      ...(isHighlightColor(r.highlight)
+        ? { highlight: r.highlight }
+        : r.highlighted === true
+          ? { highlight: DEFAULT_HIGHLIGHT }
+          : {}),
     });
   }
 

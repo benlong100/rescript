@@ -9,7 +9,6 @@ import {
   ClipboardPaste,
   Eraser,
   Eye,
-  Highlighter,
   EyeOff,
   Merge,
   MoveRight,
@@ -22,7 +21,13 @@ import {
 import { FloatingPortal } from "@floating-ui/react";
 import { useEditorStore } from "@/lib/store";
 import { orderWordsForDisplay } from "@/lib/segments";
-import { highlightedIds as highlightedWordIds, visibleWords } from "@/lib/highlights";
+import {
+  HIGHLIGHT_COLORS,
+  highlightedIds as highlightedWordIds,
+  highlightOf,
+  visibleWords,
+  type HighlightColor,
+} from "@/lib/highlights";
 import { useOrderedRanges } from "@/hooks/useOrderedRanges";
 import { isDisfluencyPlaceholder } from "@/lib/disfluencies";
 import TranscriptToolsMenu from "./TranscriptToolsMenu";
@@ -51,21 +56,55 @@ import { useCutRanges } from "@/hooks/useCutRanges";
 import { findActiveWordId, groupWordsBySpeaker } from "@/lib/transcript";
 import { isTypingTarget } from "@/lib/keyboard";
 import { useI18n } from "./I18nProvider";
-import { localizeRuntimeMessage } from "@/lib/i18n";
+import { localizeRuntimeMessage, type MessageKey } from "@/lib/i18n";
+
+/**
+ * Marker styling per colour. Written out rather than composed, because
+ * Tailwind only emits classes it can see as literals.
+ */
+const HIGHLIGHT_WORD_CLASS: Record<HighlightColor, string> = {
+  yellow:
+    "bg-yellow-200/80 text-zinc-900 hover:bg-yellow-300/80 dark:bg-yellow-400/25 dark:text-yellow-50 dark:hover:bg-yellow-400/40",
+  green:
+    "bg-green-200/80 text-zinc-900 hover:bg-green-300/80 dark:bg-green-400/25 dark:text-green-50 dark:hover:bg-green-400/40",
+  blue:
+    "bg-sky-200/80 text-zinc-900 hover:bg-sky-300/80 dark:bg-sky-400/25 dark:text-sky-50 dark:hover:bg-sky-400/40",
+  purple:
+    "bg-violet-200/80 text-zinc-900 hover:bg-violet-300/80 dark:bg-violet-400/25 dark:text-violet-50 dark:hover:bg-violet-400/40",
+  pink:
+    "bg-pink-200/80 text-zinc-900 hover:bg-pink-300/80 dark:bg-pink-400/25 dark:text-pink-50 dark:hover:bg-pink-400/40",
+};
+
+/** Swatch fill for the toolbar buttons. */
+const HIGHLIGHT_SWATCH_CLASS: Record<HighlightColor, string> = {
+  yellow: "bg-yellow-300 dark:bg-yellow-400",
+  green: "bg-green-300 dark:bg-green-400",
+  blue: "bg-sky-300 dark:bg-sky-400",
+  purple: "bg-violet-300 dark:bg-violet-400",
+  pink: "bg-pink-300 dark:bg-pink-400",
+};
+
+const HIGHLIGHT_LABEL_KEY: Record<HighlightColor, MessageKey> = {
+  yellow: "highlight.yellow",
+  green: "highlight.green",
+  blue: "highlight.blue",
+  purple: "highlight.purple",
+  pink: "highlight.pink",
+};
 
 const WordSpan = memo(function WordSpan({
   word,
   cutOut,
   active,
-  highlighted,
+  highlight,
   onClick,
 }: {
   word: Word;
   /** True when the word is removed from the edited media (deleted or covered by a cut). */
   cutOut: boolean;
   active: boolean;
-  /** Marked by the user as a keeper. */
-  highlighted: boolean;
+  /** Marker colour, or null when unmarked. */
+  highlight: HighlightColor | null;
   onClick: (word: Word, el: HTMLElement) => void;
 }) {
   const { t } = useI18n();
@@ -79,15 +118,15 @@ const WordSpan = memo(function WordSpan({
       data-placeholder={placeholder ? "" : undefined}
       title={placeholder ? t("transcript.hesitation") : undefined}
       onClick={(e) => onClick(word, e.currentTarget)}
-      data-highlighted={highlighted ? "" : undefined}
+      data-highlighted={highlight ?? undefined}
       // Cut and playhead states still win: a marked word must never hide that
       // it is deleted, and the playhead has to stay findable while scrubbing.
       className={`py-0.5 cursor-pointer transition-colors duration-75 ${cutOut
         ? "word-deleted bg-red-50 text-red-600 line-through decoration-red-300 dark:bg-red-950/40 dark:text-red-400 dark:decoration-red-800"
         : active
           ? "bg-neutral-200/80 text-zinc-900 dark:bg-neutral-700/80 dark:text-zinc-50"
-          : highlighted
-            ? "bg-yellow-200/80 text-zinc-900 hover:bg-yellow-300/80 dark:bg-yellow-400/25 dark:text-yellow-50 dark:hover:bg-yellow-400/35"
+          : highlight
+            ? HIGHLIGHT_WORD_CLASS[highlight]
             : placeholder
               ? "font-medium text-amber-700/90 hover:bg-amber-50 dark:text-amber-400/90 dark:hover:bg-amber-950/40"
               : "text-zinc-800 hover:bg-neutral-50 dark:text-zinc-200 dark:hover:bg-neutral-800/60"
@@ -310,14 +349,17 @@ export default function TranscriptPanel() {
     if (placeMoveBeforeSelection()) clearSelection();
   }, [placeMoveBeforeSelection, clearSelection]);
 
-  const highlightSelection = useCallback(() => {
-    if (!selection) return;
-    setWordsHighlighted(selection.ids, true);
-  }, [selection, setWordsHighlighted]);
+  const highlightSelection = useCallback(
+    (color: HighlightColor) => {
+      if (!selection) return;
+      setWordsHighlighted(selection.ids, color);
+    },
+    [selection, setWordsHighlighted]
+  );
 
   const unhighlightSelection = useCallback(() => {
     if (!selection) return;
-    setWordsHighlighted(selection.ids, false);
+    setWordsHighlighted(selection.ids, null);
   }, [selection, setWordsHighlighted]);
 
   const restoreSelection = useCallback(() => {
@@ -587,7 +629,7 @@ export default function TranscriptPanel() {
                               word={w}
                               cutOut={cutOutIds.has(w.id)}
                               active={w.id === activeWordId}
-                              highlighted={highlightedIds.has(w.id)}
+                              highlight={highlightOf(w)}
                               onClick={onWordClick}
                             />
                           </React.Fragment>
@@ -627,15 +669,21 @@ export default function TranscriptPanel() {
                     {t("common.restore")}
                   </button>
                 )}
-                {selection.anyUnhighlighted && (
-                  <button
-                    onClick={highlightSelection}
-                    className="flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-zinc-700 transition hover:bg-yellow-100 hover:text-yellow-900 dark:text-zinc-200 dark:hover:bg-yellow-400/20 dark:hover:text-yellow-100"
-                  >
-                    <Highlighter size={13} />
-                    {t("transcript.highlight")}
-                  </button>
-                )}
+                <span
+                  className="flex items-center gap-1 px-1"
+                  role="group"
+                  aria-label={t("transcript.highlight")}
+                >
+                  {HIGHLIGHT_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => highlightSelection(color)}
+                      title={t(HIGHLIGHT_LABEL_KEY[color])}
+                      aria-label={t(HIGHLIGHT_LABEL_KEY[color])}
+                      className={`h-4 w-4 cursor-pointer rounded-full ring-1 ring-black/10 transition hover:scale-115 dark:ring-white/20 ${HIGHLIGHT_SWATCH_CLASS[color]}`}
+                    />
+                  ))}
+                </span>
                 {selection.anyHighlighted && (
                   <button
                     onClick={unhighlightSelection}

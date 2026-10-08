@@ -52,7 +52,7 @@ const project: ProjectFileData = {
     word(1, "Here", 0, 0.4),
     word(2, "is", 0.45, 0.6),
     { ...word(3, "um", 0.65, 0.9), deleted: true },
-    { ...word(4, "sentence", 1.0, 1.6), highlighted: true },
+    { ...word(4, "sentence", 1.0, 1.6), highlight: "green" as const },
   ],
   speakers: [{ id: 0, name: "Student" }],
   manualCuts: [{ id: 1, start: 2.0, end: 2.5 }],
@@ -105,11 +105,11 @@ const project: ProjectFileData = {
   assert(data.words[0].start === 0 && data.words[1].end === 0.6, "word timings");
 
   assert(
-    data.words[3].highlighted === true,
-    "a highlight must survive save and open"
+    data.words[3].highlight === "green",
+    `a highlight colour must survive save and open: ${data.words[3].highlight}`
   );
   assert(
-    data.words[0].highlighted === undefined,
+    data.words[0].highlight === undefined,
     "unmarked words stay unmarked"
   );
 

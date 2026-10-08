@@ -232,15 +232,18 @@ async function checkHighlighting(win) {
     word.click();
     await sleep(400);
 
-    const button = [...document.querySelectorAll('button')].find(
-      (b) => b.textContent.trim() === 'Highlight'
-    );
-    if (!button) return 'no-highlight-button';
-    button.click();
+    // The toolbar offers one swatch per colour; pick a non-default one so a
+    // stuck default could not pass this by accident.
+    const swatch = document.querySelector('button[aria-label="Highlight green"]');
+    if (!swatch) return 'no-highlight-swatch';
+    swatch.click();
     await sleep(400);
 
-    const count = document.querySelectorAll('[data-highlighted]').length;
-    if (count === 0) return 'nothing-marked';
+    const marks = document.querySelectorAll('[data-highlighted]');
+    if (marks.length === 0) return 'nothing-marked';
+    const colour = marks[0].getAttribute('data-highlighted');
+    if (colour !== 'green') return 'wrong-colour:' + colour;
+    const count = marks.length + ' green';
 
     // The Tools menu should now offer the unhighlighted actions.
     const tools = [...document.querySelectorAll('button')].find(

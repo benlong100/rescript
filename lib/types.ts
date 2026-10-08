@@ -12,9 +12,17 @@ export interface Word {
   /** Deleted words are cut out of the video. */
   deleted: boolean;
   /**
-   * Marked by the user as a keeper. Purely an annotation: it changes nothing
-   * about the rendered media on its own, and drives the "unhighlighted" tools.
-   * Optional so saves and transcripts written before highlighting still load.
+   * Marker colour, when the user has marked this word. Purely an annotation:
+   * it changes nothing about the rendered media on its own, and drives the
+   * "unhighlighted" tools. Optional so saves written before highlighting load.
+   *
+   * Read it with `highlightOf()` rather than directly — that also understands
+   * {@link Word.highlighted} from before colours existed.
+   */
+  highlight?: import("./highlights").HighlightColor;
+  /**
+   * @deprecated Highlighting was a plain boolean before colours. Still read, so
+   * projects and transcripts saved then keep their marks; never written.
    */
   highlighted?: boolean;
 }

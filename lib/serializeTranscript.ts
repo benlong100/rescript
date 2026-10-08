@@ -4,6 +4,7 @@ import { speakerLabel, speakersFromWords } from "./speakers";
 import { groupWordsBySpeaker } from "./transcript";
 import type { SpeakerInfo, TimeRange, Word } from "./types";
 import { zipStore } from "./zipStore";
+import { highlightOf } from "./highlights";
 
 /** Timed caption / subtitle formats (importable). */
 export type SubtitleFormat = "srt" | "vtt" | "json";
@@ -178,7 +179,8 @@ function serializeJson(words: Word[], speakers: SpeakerInfo[]): string {
         deleted: w.deleted,
         // Only written when set, so a transcript that was never highlighted
         // serializes byte for byte as it did before the feature existed.
-        ...(w.highlighted === true ? { highlighted: true } : {}),
+        // `highlightOf` also upgrades the pre-colour boolean on the way out.
+        ...(highlightOf(w) ? { highlight: highlightOf(w) } : {}),
       })),
     },
     null,
