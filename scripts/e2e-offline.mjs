@@ -19,7 +19,7 @@
 import { app, protocol, net, BrowserWindow } from "electron";
 import { existsSync, statSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { dirname, join, normalize, extname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -39,6 +39,11 @@ protocol.registerSchemesAsPrivileged([
 
 app.commandLine.appendSwitch("enable-features", "SharedArrayBuffer");
 
+process.on("unhandledRejection", (err) => {
+  console.log(`RESULT: UNHANDLED — ${err instanceof Error ? err.message : err}`);
+  app.exit(4);
+});
+
 app.whenReady().then(async () => {
   protocol.handle("app", async (req) => {
     const { pathname } = new URL(req.url);
@@ -57,18 +62,29 @@ app.whenReady().then(async () => {
     return new Response(res.body, { status: res.status, headers: h });
   });
 
+  // Visible on purpose: Chromium throttles timers and rAF in hidden windows,
+  // which would make transcription here slower and flakier than in real use.
+  // It drives itself — the title says so, because watching it operate its own
+  // dialogs looks exactly like an app waiting for input.
   const win = new BrowserWindow({ width: 1280, height: 900, show: true });
+  console.log(
+    "RESULT: a Rescript window will open and operate itself — no input needed"
+  );
   const logs = [];
   win.webContents.on("console-message", (_e, level, message) => {
     if (/error|fail|unable|unsupported|cannot|throw/i.test(message)) logs.push(`[${level}] ${message}`);
   });
 
   await win.loadURL("app://localhost/");
+  win.setTitle("Rescript automated test — driving itself, no input needed");
   await new Promise((r) => setTimeout(r, 2500));
 
-  // Hand the WAV to the real hidden file input via CDP.
   const dbg = win.webContents.debugger;
   dbg.attach("1.3");
+
+  const joined = await checkJoin(win, dbg, WAV);
+
+  // Hand the WAV to the real hidden file input via CDP.
   await dbg.sendCommand("DOM.enable");
   const { root } = await dbg.sendCommand("DOM.getDocument", { depth: -1 });
   const { nodeId } = await dbg.sendCommand("DOM.querySelector", {
@@ -96,7 +112,7 @@ app.whenReady().then(async () => {
       if (logs.length) console.log("console errors:\n" + logs.slice(0, 8).join("\n"));
       const marked = await checkHighlighting(win);
       const saved = await checkSaveProject(win);
-      return app.exit(marked && saved ? 0 : 3);
+      return app.exit(joined && marked && saved ? 0 : 3);
     }
   }
   console.log("RESULT: TIMED OUT with no transcript");
@@ -247,4 +263,117 @@ async function checkHighlighting(win) {
     marked.startsWith("marked:") &&
     marked.includes("Remove unhighlighted")
   );
+}
+
+/**
+ * Join the same recording with itself through the real dialog and confirm the
+ * result is exactly twice as long. Using one file twice needs no extra fixture
+ * and makes the expected duration unambiguous.
+ */
+async function checkJoin(win, dbg, wav) {
+  try {
+    return await runJoinCheck(win, dbg, wav);
+  } catch (err) {
+    console.log(`RESULT: JOIN threw — ${err instanceof Error ? err.message : err}`);
+    return false;
+  }
+}
+
+async function runJoinCheck(win, dbg, wav) {
+  const ffmpeg = ["build/ffmpeg/mac-arm64/ffmpeg", "build/ffmpeg/mac-x64/ffmpeg"]
+    .map((p) => join(HERE, "..", p))
+    .find((p) => existsSync(p));
+  if (!ffmpeg) {
+    console.log("RESULT: JOIN skipped (no bundled ffmpeg)");
+    return true;
+  }
+  /**
+   * `ffmpeg -i <file>` writes its report to **stderr** and exits **1** when no
+   * output file is given, so this needs spawnSync (which does not throw on a
+   * non-zero exit) and has to read stderr rather than stdout. execFileSync here
+   * throws, and the rejection left the harness hanging with its window open.
+   */
+  const seconds = (file) => {
+    const run = spawnSync(ffmpeg, ["-hide_banner", "-i", file], {
+      encoding: "utf8",
+    });
+    const report = `${run.stderr ?? ""}${run.stdout ?? ""}`;
+    const m = /Duration: (\d+):(\d+):([0-9.]+)/.exec(report);
+    if (!m) throw new Error(`could not read a duration from ${file}`);
+    return +m[1] * 3600 + +m[2] * 60 + +m[3];
+  };
+
+  const opened = await win.webContents.executeJavaScript(`(async () => {
+    const b = [...document.querySelectorAll('button')].find(
+      (x) => x.textContent.trim() === 'Join audio files'
+    );
+    if (!b) return 'no-button';
+    b.click();
+    await new Promise((r) => setTimeout(r, 400));
+    return document.querySelector('[role="dialog"]') ? 'open' : 'no-dialog';
+  })()`);
+  if (opened !== "open") {
+    console.log(`RESULT: JOIN ${opened}`);
+    return false;
+  }
+
+  await dbg.sendCommand("DOM.enable");
+  const { root } = await dbg.sendCommand("DOM.getDocument", { depth: -1 });
+  const { nodeId } = await dbg.sendCommand("DOM.querySelector", {
+    nodeId: root.nodeId,
+    selector: 'input[type="file"][multiple]',
+  });
+  if (!nodeId) {
+    console.log("RESULT: JOIN no multi-file input");
+    return false;
+  }
+  await dbg.sendCommand("DOM.setFileInputFiles", { nodeId, files: [wav, wav] });
+
+  const dest = join(tmpdir(), `rescript-join-${Date.now()}.wav`);
+  const done = new Promise((resolve) => {
+    win.webContents.session.once("will-download", (_e, item) => {
+      item.setSavePath(dest);
+      item.once("done", (_ev, state) => resolve(state));
+    });
+    setTimeout(() => resolve("timeout"), 30000);
+  });
+
+  const clicked = await win.webContents.executeJavaScript(`(async () => {
+    await new Promise((r) => setTimeout(r, 400));
+    const b = [...document.querySelectorAll('button')].find(
+      (x) => x.textContent.trim() === 'Join and save'
+    );
+    if (!b) return 'no-join-button';
+    if (b.disabled) return 'disabled';
+    b.click();
+    return 'clicked';
+  })()`);
+  if (clicked !== "clicked") {
+    console.log(`RESULT: JOIN ${clicked}`);
+    return false;
+  }
+
+  const state = await done;
+  if (state !== "completed") {
+    console.log(`RESULT: JOIN download ${state}`);
+    return false;
+  }
+
+  const one = seconds(wav);
+  const two = seconds(dest);
+  const ok = Math.abs(two - one * 2) < 0.1;
+  console.log(
+    `RESULT: JOINED ${one.toFixed(2)}s + ${one.toFixed(2)}s -> ${two.toFixed(2)}s ${ok ? "ok" : "MISMATCH"}`
+  );
+  unlinkSync(dest);
+
+  // Leave the upload screen as it was for the rest of the run.
+  await win.webContents.executeJavaScript(`(async () => {
+    const x = [...document.querySelectorAll('[role="dialog"] button')].pop();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await new Promise((r) => setTimeout(r, 300));
+    return !document.querySelector('[role="dialog"]');
+  })()`);
+
+  return ok;
 }

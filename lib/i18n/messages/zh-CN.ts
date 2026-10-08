@@ -65,6 +65,36 @@ export const zhCN: Record<MessageKey, string> = {
   "editor.openProjectFile": "Open project file",
   // TODO: translate
   "upload.openProject": "Open a saved project",
+  // TODO: translate
+  "upload.joinFiles": "Join audio files",
+  // TODO: translate
+  "join.title": "Join audio files",
+  // TODO: translate
+  "join.description": "Recordings are joined end to end, in the order below.",
+  // TODO: translate
+  "join.addFiles": "Add recordings",
+  // TODO: translate
+  "join.run": "Join and save",
+  // TODO: translate
+  "join.joining": "Joining…",
+  // TODO: translate
+  "join.reading": "Reading {name}…",
+  // TODO: translate
+  "join.encoding": "Writing the joined file…",
+  // TODO: translate
+  "join.needTwo": "Choose at least two recordings.",
+  // TODO: translate
+  "join.moveUp": "Move earlier",
+  // TODO: translate
+  "join.moveDown": "Move later",
+  // TODO: translate
+  "join.removeFile": "Remove from the list",
+  // TODO: translate
+  "join.saved": "Saved {name}",
+  // TODO: translate
+  "join.sizeNote": "Joined files are saved as WAV, so they are larger than the originals but lose no quality.",
+  // TODO: translate
+  "error.joinFailed": "Could not read that recording. Is it an audio file?",
   "topbar.startOver": "重新开始",
   "transcript.replace": "用 SRT、VTT 或 JSON 替换转录文本",
   "transcript.header": "转录文本",

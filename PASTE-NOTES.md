@@ -221,6 +221,39 @@ Verified by `npm run test:highlights` plus a step in
 both the rendered mark and the Tools menu counts — the button-to-store wiring
 no unit test reaches.
 
+## Join audio files
+
+**Join audio files** on the home screen takes several recordings and writes one
+WAV, end to end, in the listed order. Files arrive sorted by name with a numeric
+collator (so take10 follows take9, not take1) and can be reordered or removed
+before joining. It outputs a file; import it like any other recording.
+
+Deliberately **not** an ffmpeg job. `OfflineAudioContext.decodeAudioData` already
+reads every format the app accepts and resamples everything to one rate on the
+way in, so the only work left is laying samples end to end and writing a WAV
+header (`lib/joinAudio.ts`). That needs no native bridge, no ffmpeg.wasm core,
+and behaves identically in the browser and in Electron. Offline rather than a
+live AudioContext, so no output device is opened and no autoplay policy applies.
+
+WAV because it is lossless: joined takes are the *start* of someone's edit, and
+a lossy re-encode here would bake a generation of loss into everything after.
+The files are correspondingly large.
+
+Mono mixed with stereo is normal when takes come from different apps, so the
+result takes the widest channel count present and a mono chunk is duplicated
+across channels rather than landing only on the left.
+
+This is the pragmatic answer to "can a second file be appended to a project".
+Appending into an open project would mean offsetting the new words by the first
+file's duration, and the reported duration is not reliable enough: joining a
+1.38s and a 1.75s WAV measured 3.14s, not 3.13s, and lossy formats drift
+further. Joining up front avoids the offset entirely.
+
+Verified by `npm run test:join` (sample order, channel widening, rate
+mismatches, peak clamping, every WAV header field) and by a step in
+`npm run test:e2e-offline` that drives the real dialog and checks the output is
+twice as long as the one file given to it twice.
+
 ## Known gaps
 
 - **The timeline canvas is still a source-time view.** Word pills and the

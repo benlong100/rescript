@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   AudioLines,
   Clapperboard,
+  Combine,
   Film,
   FolderOpen,
   Loader2,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import SocialLinks, { WEBSITE_URL } from "./SocialLinks";
+import JoinAudioDialog from "./JoinAudioDialog";
 import SettingsMenu from "./SettingsMenu";
 import ModelSelector, {
   LanguageSection,
@@ -168,6 +170,7 @@ export default function UploadScreen({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const projectInputRef = useRef<HTMLInputElement>(null);
+  const [joinOpen, setJoinOpen] = useState(false);
   const inputId = useId();
   const [dragging, setDragging] = useState(false);
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
@@ -430,6 +433,13 @@ export default function UploadScreen({
           {ready && (
             <div className="mt-4 flex justify-center">
               <button
+                onClick={() => setJoinOpen(true)}
+                className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+              >
+                <Combine size={14} />
+                {t("upload.joinFiles")}
+              </button>
+              <button
                 onClick={() => projectInputRef.current?.click()}
                 className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
               >
@@ -478,6 +488,7 @@ export default function UploadScreen({
           </div>}
         </div>
       </div>
+      {joinOpen && <JoinAudioDialog onClose={() => setJoinOpen(false)} />}
     </div>
   );
 }
