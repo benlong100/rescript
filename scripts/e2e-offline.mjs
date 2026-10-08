@@ -94,8 +94,9 @@ app.whenReady().then(async () => {
       console.log(`RESULT: TRANSCRIBED ${st.n} words after ~${i * 2}s`);
       console.log(`RESULT: "${st.text}"`);
       if (logs.length) console.log("console errors:\n" + logs.slice(0, 8).join("\n"));
+      const marked = await checkHighlighting(win);
       const saved = await checkSaveProject(win);
-      return app.exit(saved ? 0 : 3);
+      return app.exit(marked && saved ? 0 : 3);
     }
   }
   console.log("RESULT: TIMED OUT with no transcript");
@@ -199,4 +200,51 @@ async function checkOpenProject(win, file) {
   }
   console.log("RESULT: reopening the project produced no transcript");
   return false;
+}
+
+/**
+ * Drive the highlight interaction: click a word, press Highlight on the
+ * floating toolbar, and confirm the word is marked and the Tools menu offers
+ * the unhighlighted actions. Unit tests cover the logic; only this covers the
+ * wiring from button to store to rendered class.
+ */
+async function checkHighlighting(win) {
+  const marked = await win.webContents.executeJavaScript(`(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const word = document.querySelector('[data-wid]');
+    if (!word) return 'no-word';
+    word.click();
+    await sleep(400);
+
+    const button = [...document.querySelectorAll('button')].find(
+      (b) => b.textContent.trim() === 'Highlight'
+    );
+    if (!button) return 'no-highlight-button';
+    button.click();
+    await sleep(400);
+
+    const count = document.querySelectorAll('[data-highlighted]').length;
+    if (count === 0) return 'nothing-marked';
+
+    // The Tools menu should now offer the unhighlighted actions.
+    const tools = [...document.querySelectorAll('button')].find(
+      (b) =>
+        (b.getAttribute('title') || '').includes('Bulk transcript') ||
+        b.textContent.trim() === 'Tools'
+    );
+    if (!tools) return 'marked:' + count + ' but no tools trigger';
+    tools.click();
+    await sleep(400);
+    const labels = [...document.querySelectorAll('button')]
+      .map((b) => b.textContent.trim())
+      .filter((t) => t.includes('unhighlighted'));
+    return 'marked:' + count + ' tools:[' + labels.join(' | ') + ']';
+  })()`);
+
+  console.log(`RESULT: HIGHLIGHT ${marked}`);
+  return (
+    typeof marked === "string" &&
+    marked.startsWith("marked:") &&
+    marked.includes("Remove unhighlighted")
+  );
 }

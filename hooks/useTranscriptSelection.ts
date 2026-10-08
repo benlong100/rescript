@@ -15,6 +15,9 @@ export interface TranscriptSelectionInfo {
   ids: number[];
   anyDeleted: boolean;
   anyKept: boolean;
+  /** Drives Highlight vs Remove highlight on the floating toolbar. */
+  anyHighlighted: boolean;
+  anyUnhighlighted: boolean;
 }
 
 /** While dragging: paint marks only. On mouseup / keyboard: sync to React. */
@@ -72,24 +75,31 @@ function wordElsInRange(
 
 function selectionInfoFromWordEls(
   els: HTMLElement[],
-  cutOutIds: Set<number>
+  cutOutIds: Set<number>,
+  highlightedIds: Set<number>
 ): TranscriptSelectionInfo | null {
   if (els.length === 0) return null;
 
   const ids: number[] = [];
   let anyDeleted = false;
   let anyKept = false;
+  let anyHighlighted = false;
+  let anyUnhighlighted = false;
   for (const el of els) {
     const id = Number(el.dataset.wid);
     ids.push(id);
     if (cutOutIds.has(id)) anyDeleted = true;
     else anyKept = true;
+    if (highlightedIds.has(id)) anyHighlighted = true;
+    else anyUnhighlighted = true;
   }
 
   return {
     ids,
     anyDeleted,
     anyKept,
+    anyHighlighted,
+    anyUnhighlighted,
   };
 }
 
@@ -105,11 +115,13 @@ export function useTranscriptSelection({
    * When true, native selectioncollapse (e.g. focusing a popover input) must
    * not clear the transcript selection — used by Correct / Speaker pickers.
    */
+  highlightedIds,
   freezeSelectionRef,
 }: {
   containerRef: RefObject<HTMLElement | null>;
   scrollRef: RefObject<HTMLElement | null>;
   cutOutIds: Set<number>;
+  highlightedIds: Set<number>;
   freezeSelectionRef: RefObject<boolean>;
 }) {
   const selectedWordIds = useEditorStore((s) => s.selectedWordIds);
@@ -126,9 +138,11 @@ export function useTranscriptSelection({
   const mouseDownRef = useRef(false);
   // Mirrored into a ref so the event handlers below stay stable across edits.
   const cutOutIdsRef = useRef(cutOutIds);
+  const highlightedIdsRef = useRef(highlightedIds);
   useEffect(() => {
     cutOutIdsRef.current = cutOutIds;
-  }, [cutOutIds]);
+    highlightedIdsRef.current = highlightedIds;
+  }, [cutOutIds, highlightedIds]);
 
   const clearMarks = useCallback(() => {
     for (const el of markedRef.current) el.removeAttribute("data-sel");
@@ -190,10 +204,13 @@ export function useTranscriptSelection({
       applyMarks([el]);
       clickSelectionRef.current = true;
       const cutOut = cutOutIdsRef.current.has(word.id);
+      const marked = highlightedIdsRef.current.has(word.id);
       setSelection({
         ids: [word.id],
         anyDeleted: cutOut,
         anyKept: !cutOut,
+        anyHighlighted: marked,
+        anyUnhighlighted: !marked,
       });
       setSelectedWords([word.id]);
     },
@@ -231,7 +248,11 @@ export function useTranscriptSelection({
       clickSelectionRef.current = false;
       const els = wordElsInRange(container, range);
       applyMarks(els);
-      const info = selectionInfoFromWordEls(els, cutOutIdsRef.current);
+      const info = selectionInfoFromWordEls(
+        els,
+        cutOutIdsRef.current,
+        highlightedIdsRef.current
+      );
 
       if (mode === "paint") {
         // Hide a stale toolbar while dragging; marks stay imperative.
@@ -315,11 +336,14 @@ export function useTranscriptSelection({
       ids: selectedWordIds,
       anyDeleted: selectedWordIds.some((id) => cutOutIds.has(id)),
       anyKept: selectedWordIds.some((id) => !cutOutIds.has(id)),
+      anyHighlighted: selectedWordIds.some((id) => highlightedIds.has(id)),
+      anyUnhighlighted: selectedWordIds.some((id) => !highlightedIds.has(id)),
     });
   }, [
     selectedWordIds,
     selection,
     cutOutIds,
+    highlightedIds,
     clearMarks,
     applyMarks,
     containerRef,

@@ -146,6 +146,7 @@ function wordsFromJson(text: string): ParsedTranscript {
       end: Math.max(s + 0.02, end),
       speaker,
       deleted: Boolean(r.deleted),
+      ...(r.highlighted === true ? { highlighted: true as const } : {}),
     });
   }
 

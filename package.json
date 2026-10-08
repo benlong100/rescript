@@ -21,6 +21,7 @@
     "lint": "eslint",
     "test:i18n": "tsx tests/i18n-test.ts",
     "test:paste": "tsx tests/segments-test.ts && tsx tests/paste-integration-test.ts",
+    "test:highlights": "tsx tests/highlights-test.ts",
     "test:project": "tsx tests/project-file-test.ts",
     "test:render": "tsx tests/render-order-test.ts",
     "test:offline": "tsx tests/offline-models-test.ts",

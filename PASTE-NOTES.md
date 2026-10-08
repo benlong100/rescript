@@ -179,6 +179,48 @@ never observe a state where the result and the edit disagree, and the stale
 file's resources are released rather than leaked. Reopening after an edit shows
 a plain Export button.
 
+## Highlighting (mark your keepers)
+
+Select words and press **Highlight** on the floating toolbar; they turn yellow.
+**Remove highlight** clears them. Then the transcript Tools menu offers:
+
+- **Hide unhighlighted** / **Show unhighlighted** — a view filter, so you can
+  read back only the bits you marked.
+- **Remove unhighlighted** — cuts everything you did not mark.
+
+`lib/highlights.ts` holds the logic, all of it pure functions over the word
+list. `Word.highlighted` is optional so saves and transcripts written before
+the feature still load.
+
+**A highlight is an annotation, not an edit to the media.** Two consequences
+worth keeping:
+
+- `setWordsHighlighted` passes `{ affectsRender: false }` to `pushEdit`, so
+  marking goes through undo/redo like any edit but does **not** discard a
+  finished export. Only edits that change the output invalidate a render.
+- `setHighlighted` returns the *same array* when nothing changed, and the store
+  bails out on that, so re-marking an already-marked word spends no history
+  entry.
+
+**Nothing is destructive until something is marked.** `unhighlightedKeptIds`
+returns nothing when no word is highlighted, which is what keeps "Remove
+unhighlighted" from appearing as an offer to delete the entire transcript. It
+also skips already-deleted words so the menu's count reflects real work.
+
+Cleared marks are written as `undefined`, and `serializeJson` only emits the
+field when set, so a transcript that was never highlighted serializes byte for
+byte as it did before. Highlights survive the `.rescript` round trip, the
+IndexedDB autosave, and transcript JSON export/import.
+
+In the transcript, cut and playhead styling still win over yellow: a marked
+word must never hide that it is deleted, and the playhead has to stay findable
+while scrubbing.
+
+Verified by `npm run test:highlights` plus a step in
+`npm run test:e2e-offline` that clicks a word, presses Highlight, and checks
+both the rendered mark and the Tools menu counts — the button-to-store wiring
+no unit test reaches.
+
 ## Known gaps
 
 - **The timeline canvas is still a source-time view.** Word pills and the

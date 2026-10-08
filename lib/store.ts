@@ -37,6 +37,7 @@ import {
   readProjectFile,
   writeProjectFile,
 } from "./projectFile";
+import { setHighlighted, unhighlightedKeptIds } from "./highlights";
 import { isModelId, loadModelPreference, saveModelPreference } from "./models";
 import { isTranscriptSource, type TranscriptSource } from "./source";
 import { trackEvent } from "./telemetry";
@@ -174,6 +175,8 @@ interface EditorState {
   /** Material cut and awaiting a paste destination. */
   moveClipboard: MoveClipboard | null;
   showDeleted: boolean;
+  /** False hides every unhighlighted word in the transcript. */
+  showUnhighlighted: boolean;
   past: EditSnapshot[];
   future: EditSnapshot[];
   /** Selected timeline clip index, or null. */
@@ -328,6 +331,11 @@ interface EditorState {
   undo: () => void;
   redo: () => void;
   toggleShowDeleted: () => void;
+  /** Mark or unmark words as keepers. */
+  setWordsHighlighted: (ids: number[], on: boolean) => void;
+  /** Cut everything not marked. No-op until something is marked. */
+  removeUnhighlighted: () => void;
+  toggleShowUnhighlighted: () => void;
   setCurrentTime: (t: number) => void;
   seekTo: (t: number) => void;
   setPlaying: (p: boolean) => void;
@@ -418,7 +426,13 @@ function pushEdit(
       | "nextManualCutId"
       | "nextBoundaryId"
     >
-  >
+  >,
+  /**
+   * Highlighting is an annotation: it goes through history like any other edit,
+   * but it changes nothing about the rendered media, so it must not throw away
+   * a finished export.
+   */
+  options: { affectsRender?: boolean } = {}
 ) {
   const s = get();
   const nextState: Partial<EditorState> = { future: [], ...next };
@@ -426,7 +440,10 @@ function pushEdit(
   if (!s.gestureActive) {
     nextState.past = pushHistory(s.past, snapshotOf(s));
   }
-  set({ ...nextState, ...exportInvalidation(s) });
+  set({
+    ...nextState,
+    ...(options.affectsRender === false ? {} : exportInvalidation(s)),
+  });
   bumpAutosave();
 }
 
@@ -477,6 +494,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   moves: [],
   moveClipboard: null,
   showDeleted: true,
+  showUnhighlighted: true,
   past: [],
   future: [],
   selectedClipIndex: null,
@@ -592,6 +610,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       sceneBoundaries,
       moves,
       showDeleted: record.showDeleted,
+      showUnhighlighted: true,
       past: [],
       future: [],
       selectedClipIndex: null,
@@ -1256,6 +1275,21 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   toggleShowDeleted: () => {
     set((s) => ({ showDeleted: !s.showDeleted }));
     bumpAutosave();
+  },
+  setWordsHighlighted: (ids, on) => {
+    const s = get();
+    const words = setHighlighted(s.words, ids, on);
+    // Same array back means nothing changed — don't spend a history entry.
+    if (words === s.words) return;
+    pushEdit(get, set, { words }, { affectsRender: false });
+  },
+  removeUnhighlighted: () => {
+    const ids = unhighlightedKeptIds(get().words);
+    if (ids.length === 0) return;
+    get().deleteWords(ids);
+  },
+  toggleShowUnhighlighted: () => {
+    set((s) => ({ showUnhighlighted: !s.showUnhighlighted }));
   },
 
   setCurrentTime: (currentTime) => set({ currentTime }),

@@ -52,7 +52,7 @@ const project: ProjectFileData = {
     word(1, "Here", 0, 0.4),
     word(2, "is", 0.45, 0.6),
     { ...word(3, "um", 0.65, 0.9), deleted: true },
-    word(4, "sentence", 1.0, 1.6),
+    { ...word(4, "sentence", 1.0, 1.6), highlighted: true },
   ],
   speakers: [{ id: 0, name: "Student" }],
   manualCuts: [{ id: 1, start: 2.0, end: 2.5 }],
@@ -103,6 +103,15 @@ const project: ProjectFileData = {
   assert(data.words[2].deleted === true, "a deleted word stays deleted");
   assert(data.words[3].text === "sentence", "word text");
   assert(data.words[0].start === 0 && data.words[1].end === 0.6, "word timings");
+
+  assert(
+    data.words[3].highlighted === true,
+    "a highlight must survive save and open"
+  );
+  assert(
+    data.words[0].highlighted === undefined,
+    "unmarked words stay unmarked"
+  );
 
   assert(data.speakers.length === 1 && data.speakers[0].name === "Student", "speakers");
   assert(data.manualCuts.length === 1 && data.manualCuts[0].end === 2.5, "manual cuts");

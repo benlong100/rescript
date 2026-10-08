@@ -73,6 +73,22 @@ export const ko: Record<MessageKey, string> = {
   "transcript.noSpeech": "음성이 감지되지 않았습니다. 파일에 오디오가 있는지 확인하거나 자막을 가져오세요.",
   "transcript.cut": "컷",
   // TODO: translate
+  "transcript.highlight": "Highlight",
+  // TODO: translate
+  "transcript.unhighlight": "Remove highlight",
+  // TODO: translate
+  "tools.hideUnhighlighted": "Hide unhighlighted",
+  // TODO: translate
+  "tools.hideUnhighlightedTitle": "Show only the words you have highlighted",
+  // TODO: translate
+  "tools.showUnhighlighted": "Show unhighlighted",
+  // TODO: translate
+  "tools.showUnhighlightedTitle": "Show every word again",
+  // TODO: translate
+  "tools.removeUnhighlighted": "Remove unhighlighted",
+  // TODO: translate
+  "tools.removeUnhighlightedTitle": "Cut every word you have not highlighted",
+  // TODO: translate
   "transcript.moveLift": "Move",
   // TODO: translate
   "transcript.movePlace": "Place here",

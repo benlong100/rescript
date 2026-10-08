@@ -11,6 +11,12 @@ export interface Word {
   speaker: number;
   /** Deleted words are cut out of the video. */
   deleted: boolean;
+  /**
+   * Marked by the user as a keeper. Purely an annotation: it changes nothing
+   * about the rendered media on its own, and drives the "unhighlighted" tools.
+   * Optional so saves and transcripts written before highlighting still load.
+   */
+  highlighted?: boolean;
 }
 
 /** A half-open time range [start, end) in original media seconds. */

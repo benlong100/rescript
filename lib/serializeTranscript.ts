@@ -176,6 +176,9 @@ function serializeJson(words: Word[], speakers: SpeakerInfo[]): string {
         end: roundTime(w.end),
         speaker: w.speaker,
         deleted: w.deleted,
+        // Only written when set, so a transcript that was never highlighted
+        // serializes byte for byte as it did before the feature existed.
+        ...(w.highlighted === true ? { highlighted: true } : {}),
       })),
     },
     null,

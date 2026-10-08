@@ -1,9 +1,19 @@
 "use client";
 
 import { useId, useMemo, useState } from "react";
-import { Undo2, VolumeX, WandSparkles, Zap, type LucideIcon } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Highlighter,
+  Undo2,
+  VolumeX,
+  WandSparkles,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import { useEditorStore } from "@/lib/store";
 import { findDeletedFillerWordIds, findFillerWordIds } from "@/lib/fillers";
+import { unhighlightedIds, unhighlightedKeptIds } from "@/lib/highlights";
 import {
   findSilenceCuts,
   findSilenceRanges,
@@ -23,10 +33,17 @@ type ToolContext = {
   deletedFillerIds: number[];
   silenceRanges: ReturnType<typeof findSilenceRanges>;
   silenceCuts: ReturnType<typeof findSilenceCuts>;
+  /** Unmarked words still in the edit — what "Remove unhighlighted" would cut. */
+  unhighlightedKept: number[];
+  /** Unmarked words of any state — what "Hide unhighlighted" would conceal. */
+  unhighlightedAll: number[];
+  showUnhighlighted: boolean;
   deleteWords: (ids: number[]) => void;
   restoreWords: (ids: number[]) => void;
   cutRanges: (ranges: { start: number; end: number }[]) => void;
   restoreRanges: (ranges: { start: number; end: number }[]) => void;
+  removeUnhighlighted: () => void;
+  toggleShowUnhighlighted: () => void;
 };
 
 type ToolDef = {
@@ -73,6 +90,33 @@ const TOOLS: ToolDef[] = [
     count: (ctx) => ctx.silenceCuts.length,
     run: (ctx) => ctx.restoreRanges(ctx.silenceCuts),
   },
+  {
+    key: "hide-unhighlighted",
+    labelKey: "tools.hideUnhighlighted",
+    titleKey: "tools.hideUnhighlightedTitle",
+    Icon: EyeOff,
+    // Only offered while something is marked and the rest is still on screen.
+    count: (ctx) => (ctx.showUnhighlighted ? ctx.unhighlightedAll.length : 0),
+    run: (ctx) => ctx.toggleShowUnhighlighted(),
+  },
+  {
+    key: "show-unhighlighted",
+    labelKey: "tools.showUnhighlighted",
+    titleKey: "tools.showUnhighlightedTitle",
+    Icon: Eye,
+    count: (ctx) => (ctx.showUnhighlighted ? 0 : ctx.unhighlightedAll.length),
+    run: (ctx) => ctx.toggleShowUnhighlighted(),
+  },
+  {
+    key: "remove-unhighlighted",
+    labelKey: "tools.removeUnhighlighted",
+    titleKey: "tools.removeUnhighlightedTitle",
+    Icon: Highlighter,
+    // `unhighlightedKeptIds` is empty when nothing is marked, so this cannot
+    // appear as an offer to delete the whole transcript.
+    count: (ctx) => ctx.unhighlightedKept.length,
+    run: (ctx) => ctx.removeUnhighlighted(),
+  },
 ];
 
 /**
@@ -89,6 +133,11 @@ export default function TranscriptToolsMenu() {
   const restoreWords = useEditorStore((s) => s.restoreWords);
   const cutRanges = useEditorStore((s) => s.cutRanges);
   const restoreRanges = useEditorStore((s) => s.restoreRanges);
+  const showUnhighlighted = useEditorStore((s) => s.showUnhighlighted);
+  const removeUnhighlighted = useEditorStore((s) => s.removeUnhighlighted);
+  const toggleShowUnhighlighted = useEditorStore(
+    (s) => s.toggleShowUnhighlighted
+  );
 
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -99,19 +148,27 @@ export default function TranscriptToolsMenu() {
       deletedFillerIds: findDeletedFillerWordIds(words),
       silenceRanges: findSilenceRanges(words, duration, manualCuts),
       silenceCuts: findSilenceCuts(words, manualCuts),
+      unhighlightedKept: unhighlightedKeptIds(words),
+      unhighlightedAll: unhighlightedIds(words),
+      showUnhighlighted,
       deleteWords,
       restoreWords,
       cutRanges,
       restoreRanges,
+      removeUnhighlighted,
+      toggleShowUnhighlighted,
     }),
     [
       words,
       duration,
       manualCuts,
+      showUnhighlighted,
       deleteWords,
       restoreWords,
       cutRanges,
       restoreRanges,
+      removeUnhighlighted,
+      toggleShowUnhighlighted,
     ]
   );
 

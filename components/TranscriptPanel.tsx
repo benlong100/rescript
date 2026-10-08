@@ -7,7 +7,9 @@ import {
   ArrowUpFromLine,
   ChevronLast,
   ClipboardPaste,
+  Eraser,
   Eye,
+  Highlighter,
   EyeOff,
   Merge,
   MoveRight,
@@ -20,6 +22,7 @@ import {
 import { FloatingPortal } from "@floating-ui/react";
 import { useEditorStore } from "@/lib/store";
 import { orderWordsForDisplay } from "@/lib/segments";
+import { highlightedIds as highlightedWordIds, visibleWords } from "@/lib/highlights";
 import { useOrderedRanges } from "@/hooks/useOrderedRanges";
 import { isDisfluencyPlaceholder } from "@/lib/disfluencies";
 import TranscriptToolsMenu from "./TranscriptToolsMenu";
@@ -54,12 +57,15 @@ const WordSpan = memo(function WordSpan({
   word,
   cutOut,
   active,
+  highlighted,
   onClick,
 }: {
   word: Word;
   /** True when the word is removed from the edited media (deleted or covered by a cut). */
   cutOut: boolean;
   active: boolean;
+  /** Marked by the user as a keeper. */
+  highlighted: boolean;
   onClick: (word: Word, el: HTMLElement) => void;
 }) {
   const { t } = useI18n();
@@ -73,13 +79,18 @@ const WordSpan = memo(function WordSpan({
       data-placeholder={placeholder ? "" : undefined}
       title={placeholder ? t("transcript.hesitation") : undefined}
       onClick={(e) => onClick(word, e.currentTarget)}
+      data-highlighted={highlighted ? "" : undefined}
+      // Cut and playhead states still win: a marked word must never hide that
+      // it is deleted, and the playhead has to stay findable while scrubbing.
       className={`py-0.5 cursor-pointer transition-colors duration-75 ${cutOut
         ? "word-deleted bg-red-50 text-red-600 line-through decoration-red-300 dark:bg-red-950/40 dark:text-red-400 dark:decoration-red-800"
         : active
           ? "bg-neutral-200/80 text-zinc-900 dark:bg-neutral-700/80 dark:text-zinc-50"
-          : placeholder
-            ? "font-medium text-amber-700/90 hover:bg-amber-50 dark:text-amber-400/90 dark:hover:bg-amber-950/40"
-            : "text-zinc-800 hover:bg-neutral-50 dark:text-zinc-200 dark:hover:bg-neutral-800/60"
+          : highlighted
+            ? "bg-yellow-200/80 text-zinc-900 hover:bg-yellow-300/80 dark:bg-yellow-400/25 dark:text-yellow-50 dark:hover:bg-yellow-400/35"
+            : placeholder
+              ? "font-medium text-amber-700/90 hover:bg-amber-50 dark:text-amber-400/90 dark:hover:bg-amber-950/40"
+              : "text-zinc-800 hover:bg-neutral-50 dark:text-zinc-200 dark:hover:bg-neutral-800/60"
         }`}
     >
       {word.text}{" "}
@@ -140,6 +151,8 @@ export default function TranscriptPanel() {
     (s) => s.placeMoveBeforeSelection
   );
   const ordered = useOrderedRanges();
+  const showUnhighlighted = useEditorStore((s) => s.showUnhighlighted);
+  const setWordsHighlighted = useEditorStore((s) => s.setWordsHighlighted);
   const playing = useEditorStore((s) => s.playing);
   const activeWordId = useEditorStore((s) => findActiveWordId(s.words, s.currentTime));
 
@@ -151,6 +164,11 @@ export default function TranscriptPanel() {
     }
     return ids;
   }, [words, cuts]);
+
+  const highlightedIds = useMemo(
+    () => new Set(highlightedWordIds(words)),
+    [words]
+  );
 
   // Splits get a joinable edit boundary in the transcript, like the timeline's
   // marker. Splits at the edge of a skipped region are inert and hidden in both.
@@ -186,6 +204,7 @@ export default function TranscriptPanel() {
     containerRef,
     scrollRef,
     cutOutIds,
+    highlightedIds,
     freezeSelectionRef,
   });
 
@@ -234,9 +253,11 @@ export default function TranscriptPanel() {
     () => orderWordsForDisplay(words, ordered),
     [words, ordered]
   );
+  // Hiding happens after ordering so a hidden run does not change the order of
+  // what remains. With nothing highlighted, `visibleWords` is a pass-through.
   const turns = useMemo(
-    () => groupWordsBySpeaker(displayWords),
-    [displayWords]
+    () => groupWordsBySpeaker(visibleWords(displayWords, showUnhighlighted)),
+    [displayWords, showUnhighlighted]
   );
 
   const deletedCount = useMemo(() => cutOutIds.size, [cutOutIds]);
@@ -288,6 +309,16 @@ export default function TranscriptPanel() {
   const pasteBeforeSelection = useCallback(() => {
     if (placeMoveBeforeSelection()) clearSelection();
   }, [placeMoveBeforeSelection, clearSelection]);
+
+  const highlightSelection = useCallback(() => {
+    if (!selection) return;
+    setWordsHighlighted(selection.ids, true);
+  }, [selection, setWordsHighlighted]);
+
+  const unhighlightSelection = useCallback(() => {
+    if (!selection) return;
+    setWordsHighlighted(selection.ids, false);
+  }, [selection, setWordsHighlighted]);
 
   const restoreSelection = useCallback(() => {
     if (!selection) return;
@@ -552,6 +583,7 @@ export default function TranscriptPanel() {
                               word={w}
                               cutOut={cutOutIds.has(w.id)}
                               active={w.id === activeWordId}
+                              highlighted={highlightedIds.has(w.id)}
                               onClick={onWordClick}
                             />
                           </React.Fragment>
@@ -589,6 +621,24 @@ export default function TranscriptPanel() {
                   >
                     <RotateCcw size={13} />
                     {t("common.restore")}
+                  </button>
+                )}
+                {selection.anyUnhighlighted && (
+                  <button
+                    onClick={highlightSelection}
+                    className="flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-zinc-700 transition hover:bg-yellow-100 hover:text-yellow-900 dark:text-zinc-200 dark:hover:bg-yellow-400/20 dark:hover:text-yellow-100"
+                  >
+                    <Highlighter size={13} />
+                    {t("transcript.highlight")}
+                  </button>
+                )}
+                {selection.anyHighlighted && (
+                  <button
+                    onClick={unhighlightSelection}
+                    className="flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-zinc-700 transition hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                  >
+                    <Eraser size={13} />
+                    {t("transcript.unhighlight")}
                   </button>
                 )}
                 {moveClipboard ? (

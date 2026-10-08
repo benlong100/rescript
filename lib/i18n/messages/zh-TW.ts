@@ -73,6 +73,22 @@ export const zhTW: Record<MessageKey, string> = {
   "transcript.noSpeech": "未偵測到語音。請確認檔案有音訊，或匯入逐字稿。",
   "transcript.cut": "剪除",
   // TODO: translate
+  "transcript.highlight": "Highlight",
+  // TODO: translate
+  "transcript.unhighlight": "Remove highlight",
+  // TODO: translate
+  "tools.hideUnhighlighted": "Hide unhighlighted",
+  // TODO: translate
+  "tools.hideUnhighlightedTitle": "Show only the words you have highlighted",
+  // TODO: translate
+  "tools.showUnhighlighted": "Show unhighlighted",
+  // TODO: translate
+  "tools.showUnhighlightedTitle": "Show every word again",
+  // TODO: translate
+  "tools.removeUnhighlighted": "Remove unhighlighted",
+  // TODO: translate
+  "tools.removeUnhighlightedTitle": "Cut every word you have not highlighted",
+  // TODO: translate
   "transcript.moveLift": "Move",
   // TODO: translate
   "transcript.movePlace": "Place here",

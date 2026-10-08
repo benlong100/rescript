@@ -73,6 +73,22 @@ export const ja: Record<MessageKey, string> = {
   "transcript.noSpeech": "音声が検出されませんでした。ファイルに音声があるか確認するか、文字起こしをインポートしてください。",
   "transcript.cut": "カット",
   // TODO: translate
+  "transcript.highlight": "Highlight",
+  // TODO: translate
+  "transcript.unhighlight": "Remove highlight",
+  // TODO: translate
+  "tools.hideUnhighlighted": "Hide unhighlighted",
+  // TODO: translate
+  "tools.hideUnhighlightedTitle": "Show only the words you have highlighted",
+  // TODO: translate
+  "tools.showUnhighlighted": "Show unhighlighted",
+  // TODO: translate
+  "tools.showUnhighlightedTitle": "Show every word again",
+  // TODO: translate
+  "tools.removeUnhighlighted": "Remove unhighlighted",
+  // TODO: translate
+  "tools.removeUnhighlightedTitle": "Cut every word you have not highlighted",
+  // TODO: translate
   "transcript.moveLift": "Move",
   // TODO: translate
   "transcript.movePlace": "Place here",
