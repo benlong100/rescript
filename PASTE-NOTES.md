@@ -2,6 +2,35 @@
 
 Downstream change on top of upstream `v1.2.4`. Branch: `paste-reorder`.
 
+The October 2026 workshop this was built for has happened, and went fine. What
+follows is maintenance notes, not a plan.
+
+## Open items
+
+Two things were deliberately deferred and never came back. Neither blocks
+anything; both have their reasoning written up further down rather than
+summarised here.
+
+1. **Keep the speech model warm between imports.** Every import reloads the
+   model, roughly **26 seconds** on an M1. The worker is recreated per
+   transcription, and upstream tears it down on purpose because a resident
+   model starved ffmpeg.wasm and broke *export* — a conflict that does not
+   apply once the native ffmpeg binary handles extraction and export, which it
+   does in this build. See **Follow-up: keep the speech model warm between
+   imports** for the approach, the measurement, and how to prove it. The
+   regression to watch for shows up in export, not in transcription.
+
+2. **A Developer ID Application certificate, for sending builds over the
+   internet.** `npm run dist:signed` is already wired and waiting on one.
+   Without it a downloaded build reports **"damaged and should be moved to the
+   Trash"**, which is Gatekeeper refusing an ad-hoc signature, not a corrupt
+   file. Copies from a local share are unaffected and need nothing. Creating
+   the certificate is four clicks in Xcode (Settings › Accounts › your team ›
+   Manage Certificates › + › Developer ID Application); Keychain Access no
+   longer exists in Tahoe. See **Distributing it over the internet (signing)**.
+
+Dropped: a one-page student handout. The class it was for has been taught.
+
 ## What it does
 
 Select words in the transcript and **Move** them (⌘⇧X, the floating toolbar
