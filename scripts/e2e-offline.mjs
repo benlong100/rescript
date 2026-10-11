@@ -110,9 +110,10 @@ app.whenReady().then(async () => {
       console.log(`RESULT: TRANSCRIBED ${st.n} words after ~${i * 2}s`);
       console.log(`RESULT: "${st.text}"`);
       if (logs.length) console.log("console errors:\n" + logs.slice(0, 8).join("\n"));
+      const found = await checkFind(win);
       const marked = await checkHighlighting(win);
       const saved = await checkSaveProject(win);
-      return app.exit(joined && marked && saved ? 0 : 3);
+      return app.exit(joined && found && marked && saved ? 0 : 3);
     }
   }
   console.log("RESULT: TIMED OUT with no transcript");
@@ -388,4 +389,47 @@ async function runJoinCheck(win, dbg, wav) {
   })()`);
 
   return ok;
+}
+
+/**
+ * Open find, search for a phrase that spans two words, and confirm it selects
+ * both — the case a per-word search would miss.
+ */
+async function checkFind(win) {
+  const result = await win.webContents.executeJavaScript(`(async () => {
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'f', metaKey: true, bubbles: true })
+    );
+    await sleep(400);
+    const input = document.querySelector('input[aria-label="Find in transcript"]');
+    if (!input) return 'no-find-bar';
+
+    // Two words in the fixture: "sentence two".
+    const setter = Object.getOwnPropertyDescriptor(
+      window.HTMLInputElement.prototype, 'value'
+    ).set;
+    setter.call(input, 'sentence two');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await sleep(500);
+
+    // The bar's own text is just the match counter; the input's value and the
+    // icon buttons contribute nothing to textContent.
+    const bar = input.closest('div');
+    const counter = (bar ? bar.textContent : '').trim() || 'no-counter';
+    const selected = document.querySelectorAll('[data-sel]').length;
+
+    // Close it again so the rest of the run starts clean.
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await sleep(300);
+    const closed = !document.querySelector('input[aria-label="Find in transcript"]');
+    return counter + ' selected:' + selected + (closed ? ' closed' : ' STILL-OPEN');
+  })()`);
+
+  console.log(`RESULT: FIND ${result}`);
+  return (
+    typeof result === "string" &&
+    /^\d+ of \d+ selected:[1-9]/.test(result) &&
+    result.includes("closed")
+  );
 }

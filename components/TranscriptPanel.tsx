@@ -21,6 +21,7 @@ import {
 import { FloatingPortal } from "@floating-ui/react";
 import { useEditorStore } from "@/lib/store";
 import { orderWordsForDisplay } from "@/lib/segments";
+import { buildTranscriptText } from "@/lib/transcriptText";
 import {
   HIGHLIGHT_COLORS,
   highlightedIds as highlightedWordIds,
@@ -40,10 +41,13 @@ import {
 import type { Word } from "@/lib/types";
 import TranscriptScrollIndicator from "./TranscriptScrollIndicator";
 import TranscriptTextLayer from "./TranscriptTextLayer";
+import TranscriptFindBar from "./TranscriptFindBar";
 import SpeakerLabel, {
   SelectionSpeakerButton,
   SelectionSpeakerPopover,
+  localizedSpeakerName,
 } from "./SpeakerLabel";
+import { speakerLabel } from "@/lib/speakers";
 import {
   getActiveSceneBoundaries,
   getKeepRanges,
@@ -192,6 +196,10 @@ export default function TranscriptPanel() {
   );
   const ordered = useOrderedRanges();
   const showUnhighlighted = useEditorStore((s) => s.showUnhighlighted);
+  const speakers = useEditorStore((s) => s.speakers);
+  const setSelectedWords = useEditorStore((s) => s.setSelectedWords);
+  const findOpen = useEditorStore((s) => s.findOpen);
+  const setFindOpen = useEditorStore((s) => s.setFindOpen);
   const setWordsHighlighted = useEditorStore((s) => s.setWordsHighlighted);
   const playing = useEditorStore((s) => s.playing);
   const activeWordId = useEditorStore((s) => findActiveWordId(s.words, s.currentTime));
@@ -308,6 +316,26 @@ export default function TranscriptPanel() {
   );
 
   const deletedCount = useMemo(() => cutOutIds.size, [cutOutIds]);
+
+  /**
+   * Plain-text projection for find, built from the rendered turns so a search
+   * only ever matches what is actually on screen — hidden or cut words are not
+   * findable while they are not shown. Skipped entirely while the bar is shut.
+   */
+  const findText = useMemo(() => {
+    if (!findOpen) return { text: "", segments: [] };
+    const shown = turns
+      .map((turn) => ({
+        ...turn,
+        words: showDeleted
+          ? turn.words
+          : turn.words.filter((w) => !cutOutIds.has(w.id)),
+      }))
+      .filter((turn) => turn.words.length > 0);
+    return buildTranscriptText(shown, (id) =>
+      localizedSpeakerName(speakerLabel(speakers, id), t)
+    );
+  }, [findOpen, turns, showDeleted, cutOutIds, speakers, t]);
   const handleImportTranscript = useCallback(
     async (files: FileList | null) => {
       const file = files?.[0];
@@ -489,6 +517,20 @@ export default function TranscriptPanel() {
     return () => document.removeEventListener("keydown", handler);
   }, [selection, moveClipboard, liftSelection, pasteBeforeSelection]);
 
+  // Cmd/Ctrl-F opens find. Unlike cut and paste, no menu role claims this
+  // accelerator, so the page does receive it — the Edit menu item exists for
+  // discoverability and sets the same store flag.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
+      if (e.key.toLowerCase() !== "f") return;
+      e.preventDefault();
+      setFindOpen(true);
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [setFindOpen]);
+
   const busy = status === "preparing" || status === "transcribing";
 
   return (
@@ -501,6 +543,14 @@ export default function TranscriptPanel() {
         <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
           {t("transcript.header")}
         </span>
+        {findOpen && status === "ready" && (
+          <TranscriptFindBar
+            text={findText.text}
+            segments={findText.segments}
+            onGoTo={setSelectedWords}
+            onClose={() => setFindOpen(false)}
+          />
+        )}
         <div className="ml-auto flex items-center gap-2">
           {moveClipboard && (
             <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[9px] font-medium text-amber-700 line-clamp-1 dark:bg-amber-950/40 dark:text-amber-400">

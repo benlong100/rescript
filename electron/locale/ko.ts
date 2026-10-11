@@ -16,6 +16,7 @@ export const ko: Record<DesktopMessageKey, string> = {
   cut: "오려두기",
   copy: "복사",
   paste: "붙여넣기",
+  find: "Find…",
   moveLift: "Move Selection",
   movePlace: "Place Moved Audio Here",
   pasteMatch: "스타일에 맞게 붙여넣기",

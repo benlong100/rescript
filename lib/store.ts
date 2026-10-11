@@ -213,6 +213,8 @@ interface EditorState {
   // Export
   exportResult: ExportResult | null;
   exportOpen: boolean;
+  /** Find bar visibility. Ephemeral UI state, outside the undo history. */
+  findOpen: boolean;
 
   // Actions
   /** Load media for editing. Pass `words` to skip Whisper and use that transcript. */
@@ -356,6 +358,7 @@ interface EditorState {
   /** Replace the current export result, freeing the previous one. */
   setExportResult: (result: ExportResult | null) => void;
   setExportOpen: (open: boolean) => void;
+  setFindOpen: (open: boolean) => void;
   reset: () => void;
 }
 
@@ -522,6 +525,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   exportResult: null,
   exportOpen: false,
+  findOpen: false,
 
   loadVideo: (file, options) => {
     const kind = detectMediaKind(file);
@@ -636,6 +640,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       playing: false,
       exportResult: null,
       exportOpen: false,
+      findOpen: false,
       waveform: null,
       hasAudio: false,
     });
@@ -1346,6 +1351,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ exportResult });
   },
   setExportOpen: (exportOpen) => set({ exportOpen }),
+  setFindOpen: (findOpen) => set({ findOpen }),
 
   reset: () => {
     const { mediaUrl, videoFile, exportResult } = get();
@@ -1385,6 +1391,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       playing: false,
       exportResult: null,
       exportOpen: false,
+      findOpen: false,
     });
   },
 }));

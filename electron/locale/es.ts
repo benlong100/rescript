@@ -16,6 +16,7 @@ export const es: Record<DesktopMessageKey, string> = {
   cut: "Cortar",
   copy: "Copiar",
   paste: "Pegar",
+  find: "Find…",
   moveLift: "Move Selection",
   movePlace: "Place Moved Audio Here",
   pasteMatch: "Pegar con el mismo estilo",

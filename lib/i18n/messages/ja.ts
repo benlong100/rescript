@@ -96,6 +96,18 @@ export const ja: Record<MessageKey, string> = {
   "topbar.startOver": "最初からやり直す",
   "transcript.replace": "SRT、VTT、JSON から文字起こしを置き換え",
   "transcript.header": "文字起こし",
+  // TODO: translate
+  "find.placeholder": "Find in transcript",
+  // TODO: translate
+  "find.none": "No matches",
+  // TODO: translate
+  "find.position": "{current} of {total}",
+  // TODO: translate
+  "find.next": "Next match",
+  // TODO: translate
+  "find.previous": "Previous match",
+  // TODO: translate
+  "find.close": "Close find",
   "transcript.wordDeleted": "{count} 語",
   "transcript.wordsDeleted": "{count} 語",
   "transcript.replaceConfirm": "現在の文字起こしをこのファイルで置き換えますか？",

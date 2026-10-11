@@ -23,7 +23,9 @@ export type MenuCommand =
   /** Write the session to a portable .rescript file. */
   | { type: "save-project-file" }
   /** Pick a .rescript file to open. */
-  | { type: "open-project-file" };
+  | { type: "open-project-file" }
+  /** Open the transcript find bar. */
+  | { type: "find" };
 
 /** The renderer owns the project list (it lives in IndexedDB); this is the last
  *  snapshot it pushed, kept so the menu can be rebuilt without asking again. */
@@ -128,6 +130,12 @@ function template(): MenuItemConstructorOptions[] {
         { role: "cut", label: t("cut") },
         { role: "copy", label: t("copy") },
         { role: "paste", label: t("paste") },
+        { type: "separator" },
+        {
+          label: t("find"),
+          accelerator: "CmdOrCtrl+F",
+          click: () => send({ type: "find" }),
+        },
         { type: "separator" },
         {
           label: t("moveLift"),

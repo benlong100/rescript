@@ -98,6 +98,18 @@ export const zhCN: Record<MessageKey, string> = {
   "topbar.startOver": "重新开始",
   "transcript.replace": "用 SRT、VTT 或 JSON 替换转录文本",
   "transcript.header": "转录文本",
+  // TODO: translate
+  "find.placeholder": "Find in transcript",
+  // TODO: translate
+  "find.none": "No matches",
+  // TODO: translate
+  "find.position": "{current} of {total}",
+  // TODO: translate
+  "find.next": "Next match",
+  // TODO: translate
+  "find.previous": "Previous match",
+  // TODO: translate
+  "find.close": "Close find",
   "transcript.wordDeleted": "已删除 {count} 个词",
   "transcript.wordsDeleted": "已删除 {count} 个词",
   "transcript.replaceConfirm": "要用此文件替换当前转录文本吗？",

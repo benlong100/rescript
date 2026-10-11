@@ -19,7 +19,9 @@ export type MenuCommand =
   /** Write the session to a portable .rescript file. */
   | { type: "save-project-file" }
   /** Pick a .rescript file to open. */
-  | { type: "open-project-file" };
+  | { type: "open-project-file" }
+  /** Open the transcript find bar. */
+  | { type: "find" };
 
 /** Why a native media call didn't succeed (mirrors `MediaFailure` in electron/media.ts). */
 export type NativeMediaFailure =

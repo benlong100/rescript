@@ -154,6 +154,9 @@ export function useDesktopMenu(
         // picker through window.rescriptOpenProjectPicker instead.
         case "open-project-file":
           return;
+        case "find":
+          useEditorStore.getState().setFindOpen(true);
+          return;
       }
     },
     [clearRecents, closeProject, syncRecents, t]

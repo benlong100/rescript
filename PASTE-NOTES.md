@@ -282,6 +282,45 @@ mismatches, peak clamping, every WAV header field) and by a step in
 `npm run test:e2e-offline` that drives the real dialog and checks the output is
 twice as long as the one file given to it twice.
 
+## Find in the transcript
+
+**⌘F** (or Edit › Find…) opens a find bar in the transcript header. Type to
+jump to the first match, Enter / Shift-Enter to step through with wrapping,
+Escape to close. The counter reads "3 of 17".
+
+Landing on a match **selects its words** rather than drawing a separate
+highlight. That is the whole design: every tool already bound to a selection —
+cut, the colour swatches, Move, Correct, speaker reassignment — then applies to
+a search result, and the existing selection machinery handles scrolling it into
+view. "Find every mention of X and highlight it" needs no new code.
+
+Matching runs over the plain-text projection from `lib/transcriptText.ts`, the
+same one the screen-reader layer uses, **not** the word list. That is what makes
+a phrase spanning several words match: the projection puts a space between
+words, so "sentence two" is contiguous there while being two spans on screen.
+`wordIdsInRange` maps the hit back to the words it touches.
+
+Consequences worth keeping:
+
+- A hit landing entirely inside a speaker prefix ("Alice: ") is dropped,
+  because it owns no word and there would be nothing to select or act on.
+- A phrase cannot match across a speaker boundary, since the projection puts a
+  newline and the next speaker's name between turns.
+- The projection is built from the **rendered** turns, so hidden or cut words
+  are not findable while they are not on screen.
+- Matches are capped at `MAX_MATCHES` (2000), since a one-letter query over an
+  hour of speech would otherwise build an array nobody navigates.
+
+Unlike ⌘X / ⌘V, no menu role claims ⌘F, so the page does receive the
+keystroke; the Edit menu item exists for discoverability and sets the same
+store flag.
+
+`npm run test:find` covers the phrase-spanning case, speaker-prefix hits being
+dropped, no match across a turn boundary, overlapping occurrences, the cap, and
+wrapping in both directions. A step in `npm run test:e2e-offline` drives the
+real bar and asserts the counter reads a position and that a two-word phrase
+selects two words.
+
 ## Known gaps
 
 - **The timeline canvas is still a source-time view.** Word pills and the

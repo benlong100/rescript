@@ -96,6 +96,18 @@ export const zhTW: Record<MessageKey, string> = {
   "topbar.startOver": "重新開始",
   "transcript.replace": "用 SRT、VTT 或 JSON 取代逐字稿",
   "transcript.header": "逐字稿",
+  // TODO: translate
+  "find.placeholder": "Find in transcript",
+  // TODO: translate
+  "find.none": "No matches",
+  // TODO: translate
+  "find.position": "{current} of {total}",
+  // TODO: translate
+  "find.next": "Next match",
+  // TODO: translate
+  "find.previous": "Previous match",
+  // TODO: translate
+  "find.close": "Close find",
   "transcript.wordDeleted": "{count} 個字",
   "transcript.wordsDeleted": "{count} 個字",
   "transcript.replaceConfirm": "要用此檔案取代目前的逐字稿嗎？",

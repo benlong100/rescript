@@ -16,6 +16,7 @@ export const zhTW: Record<DesktopMessageKey, string> = {
   cut: "剪下",
   copy: "複製",
   paste: "貼上",
+  find: "Find…",
   moveLift: "Move Selection",
   movePlace: "Place Moved Audio Here",
   pasteMatch: "貼上並符合樣式",

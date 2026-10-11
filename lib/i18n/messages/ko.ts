@@ -96,6 +96,18 @@ export const ko: Record<MessageKey, string> = {
   "topbar.startOver": "처음부터 다시",
   "transcript.replace": "SRT, VTT 또는 JSON에서 자막 바꾸기",
   "transcript.header": "자막",
+  // TODO: translate
+  "find.placeholder": "Find in transcript",
+  // TODO: translate
+  "find.none": "No matches",
+  // TODO: translate
+  "find.position": "{current} of {total}",
+  // TODO: translate
+  "find.next": "Next match",
+  // TODO: translate
+  "find.previous": "Previous match",
+  // TODO: translate
+  "find.close": "Close find",
   "transcript.wordDeleted": "{count}개 단어",
   "transcript.wordsDeleted": "{count}개 단어",
   "transcript.replaceConfirm": "현재 자막을 이 파일로 바꿀까요?",

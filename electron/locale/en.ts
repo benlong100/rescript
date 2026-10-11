@@ -14,6 +14,7 @@ export const en = {
   cut: "Cut",
   copy: "Copy",
   paste: "Paste",
+  find: "Find…",
   moveLift: "Move Selection",
   movePlace: "Place Moved Audio Here",
   pasteMatch: "Paste and Match Style",

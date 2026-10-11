@@ -96,6 +96,18 @@ export const pt: Record<MessageKey, string> = {
   "topbar.startOver": "Começar de novo",
   "transcript.replace": "Substituir transcrição a partir de SRT, VTT ou JSON",
   "transcript.header": "Transcrição",
+  // TODO: translate
+  "find.placeholder": "Find in transcript",
+  // TODO: translate
+  "find.none": "No matches",
+  // TODO: translate
+  "find.position": "{current} of {total}",
+  // TODO: translate
+  "find.next": "Next match",
+  // TODO: translate
+  "find.previous": "Previous match",
+  // TODO: translate
+  "find.close": "Close find",
   "transcript.wordDeleted": "{count} palavra",
   "transcript.wordsDeleted": "{count} palavras",
   "transcript.replaceConfirm": "Substituir a transcrição atual por este arquivo?",

@@ -16,6 +16,7 @@ export const ja: Record<DesktopMessageKey, string> = {
   cut: "切り取り",
   copy: "コピー",
   paste: "ペースト",
+  find: "Find…",
   moveLift: "Move Selection",
   movePlace: "Place Moved Audio Here",
   pasteMatch: "ペーストしてスタイルを合わせる",
