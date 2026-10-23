@@ -3,8 +3,6 @@
 import { useId, useState } from "react";
 import { Bug, ExternalLink, HomeIcon, Moon, Settings, Sun } from "lucide-react";
 import {
-  DiscordIcon,
-  DISCORD_INVITE_URL,
   FORK_REPO_URL,
   GitHubIcon,
   GITHUB_REPO_URL,
@@ -23,7 +21,8 @@ import {
 } from "@/lib/i18n";
 
 const MENU_LINKS = [
-  { labelKey: "settings.support", href: DISCORD_INVITE_URL, Icon: DiscordIcon },
+  // Upstream has a "Support" link to its Discord here; removed so teachers are
+  // not sent to the original author for help with this fork.
   {
     labelKey: "settings.reportIssue",
     href: `${FORK_REPO_URL}/issues`,

@@ -376,6 +376,14 @@ Crash reporting (Sentry) was already inert in these builds: it needs
 **On rebase:** re-check `app/layout.tsx` and `lib/telemetry.ts`, and grep for
 any new `fetch(` to an upstream host.
 
+### Settings links
+
+The links that *credit* the original project stay: its GitHub, website and X.
+The two that would route a teacher's problem to upstream are changed:
+**Report an issue** opens this fork's tracker (`FORK_REPO_URL` in
+`components/SocialLinks.tsx`), and upstream's **Support** link to its Discord is
+removed.
+
 ## Known gaps
 
 - **The timeline canvas is still a source-time view.** Word pills and the
