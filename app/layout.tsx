@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
-import { GoogleAnalytics } from "@next/third-parties/google";
-import { Analytics } from "@vercel/analytics/next";
 import { buildLocaleBootScript } from "@/lib/i18n";
 import "./globals.css";
 
@@ -16,21 +14,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Vercel Web Analytics for both the web app and the desktop shell is collected
-// by the deployment at getrescript.com, so the two show up in one dashboard.
-// The Electron app:// shell cannot serve the default /_vercel/insights paths at
-// all, so the SDK is pointed at absolute URLs through that project's CORS
-// proxy. Left unset in development so the SDK loads its debug script and logs
-// to the console instead of reporting local traffic.
-const analyticsHost =
-  process.env.NEXT_PUBLIC_VERCEL_ANALYTICS_HOST ?? "https://www.getrescript.com";
-const analyticsProps =
-  process.env.NODE_ENV === "production"
-    ? {
-      scriptSrc: `${analyticsHost}/api/va/script.js`,
-      endpoint: `${analyticsHost}/api/va`,
-    }
-    : {};
+// Upstream mounts Vercel Web Analytics and Google Analytics here, both reporting
+// to the original author's accounts. This fork is handed to schools, so both are
+// removed rather than redirected — see PASTE-NOTES.md, "No usage reporting".
 
 const title = "Rescript — edit videos like you edit text";
 const description =
@@ -92,9 +78,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full">
         {children}
-        <Analytics {...analyticsProps} />
       </body>
-      <GoogleAnalytics gaId="G-WZ055S858C" />
     </html>
   );
 }

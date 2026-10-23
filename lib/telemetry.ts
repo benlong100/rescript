@@ -53,10 +53,14 @@ function write(key: string, value: string) {
   }
 }
 
-/** Opt-out, so an unset value means enabled. */
+/**
+ * Always off in this fork. Upstream is opt-out and reports to the original
+ * author's endpoint; copies of this fork go to schools, so nothing is sent and
+ * the Settings toggle is removed. Everything downstream (`trackEvent`, renderer
+ * Sentry, the desktop mirror) already keys off this one function.
+ */
 export function isTelemetryEnabled(): boolean {
-  if (typeof window === "undefined") return false;
-  return read(ENABLED_KEY) !== "off";
+  return false;
 }
 
 /**

@@ -350,6 +350,32 @@ wrapping in both directions. A step in `npm run test:e2e-offline` drives the
 real bar and asserts the counter reads a position and that a two-word phrase
 selects two words.
 
+## No usage reporting
+
+Upstream reports to the original author's services from every copy: Google
+Analytics (`G-WZ055S858C`) and Vercel Web Analytics, both mounted in
+`app/layout.tsx`, plus its own anonymous telemetry (`lib/telemetry.ts`,
+opt-out, posting to getrescript.com). None of it carries media, filenames or
+transcript text — upstream is careful about that — but this fork is handed to
+teachers and schools, where a third party's analytics is the wrong default, and
+fork installs would muddy upstream's numbers anyway.
+
+So all three are off, permanently:
+
+- `app/layout.tsx` no longer mounts `<Analytics>` or `<GoogleAnalytics>`. The
+  packages stay in `package.json` so a rebase onto upstream touches one file.
+- `isTelemetryEnabled()` returns `false` unconditionally. `trackEvent`, the
+  renderer's Sentry gate and the desktop-side mirror all key off it, so that one
+  line silences every call site without editing them.
+- The Settings "Help improve the app" toggle is removed, since it would do
+  nothing. Its locale strings are left in place, unused.
+
+Crash reporting (Sentry) was already inert in these builds: it needs
+`NEXT_PUBLIC_SENTRY_DSN` at build time, and nothing here sets it.
+
+**On rebase:** re-check `app/layout.tsx` and `lib/telemetry.ts`, and grep for
+any new `fetch(` to an upstream host.
+
 ## Known gaps
 
 - **The timeline canvas is still a source-time view.** Word pills and the
