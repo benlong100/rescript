@@ -1,4 +1,6 @@
 export const GITHUB_REPO_URL = "https://github.com/wassgha/rescript";
+/** This fork. Bug reports come here, not to upstream's tracker; the other links credit the original project. */
+export const FORK_REPO_URL = "https://github.com/benlong100/rescript";
 export const DISCORD_INVITE_URL = "https://discord.gg/qJAhYFydat";
 export const X_PROFILE_URL = "https://x.com/wassgha";
 export const WEBSITE_URL = "https://getrescript.com";

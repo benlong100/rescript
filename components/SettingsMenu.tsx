@@ -5,6 +5,7 @@ import { Bug, ExternalLink, HomeIcon, Moon, Settings, Sun } from "lucide-react";
 import {
   DiscordIcon,
   DISCORD_INVITE_URL,
+  FORK_REPO_URL,
   GitHubIcon,
   GITHUB_REPO_URL,
   WEBSITE_URL,
@@ -25,7 +26,7 @@ const MENU_LINKS = [
   { labelKey: "settings.support", href: DISCORD_INVITE_URL, Icon: DiscordIcon },
   {
     labelKey: "settings.reportIssue",
-    href: `${GITHUB_REPO_URL}/issues`,
+    href: `${FORK_REPO_URL}/issues`,
     Icon: Bug,
   },
   { labelKey: "settings.homepage", href: WEBSITE_URL, Icon: HomeIcon },
